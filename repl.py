@@ -20,7 +20,7 @@ except ImportError:
     try:
         from imp import reload as _r  # 3.0
     except ImportError:
-        # noinspection PyUnboundLocalVariable
+        # noinspection PyUnboundLocalVariable,PyUnresolvedReferences
         _r = reload  # 2.7 - sets it._r
 
 # paths

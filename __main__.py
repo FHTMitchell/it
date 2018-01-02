@@ -19,6 +19,9 @@ if __name__ == '__main__':  # isn't this always true?
 
     if os.path.exists(subdir):
         shutil.rmtree(subdir)
+        is_new = False
+    else:
+        is_new = True
 
     os.mkdir(subdir)
 
@@ -28,4 +31,7 @@ if __name__ == '__main__':  # isn't this always true?
             newpath = os.path.join(subdir, file)
             shutil.copy(oldpath, newpath)
 
-    print('Created new it copy at {}'.format(subdir))
+    if is_new:
+        print('Created new `it` copy at {!r}'.format(subdir))
+    else:
+        print('Modified latest `it` copy at {!r}'.format(subdir))
