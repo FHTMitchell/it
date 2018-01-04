@@ -34,7 +34,20 @@ except AttributeError:
 def pluralize(n, singular, plural):
     """Returns singular if n == 1 else plural"""
     return singular if n == 1 else plural
-    
+
+def _splitter(str_iter, sep):
+    return flatten(s.split(sep) for s in str_iter)
+
+def splitall(s, seps, strip=False, filter_empty=False):
+    s = [s]
+    for sep in seps:
+        s = _splitter(s, sep)
+    if strip:
+        s = map(str.strip, s)
+    if filter_empty:
+        s = filter(bool, s)
+    return s
+
     
 def remove(container, *elems):
     """ Remove elems from containers
