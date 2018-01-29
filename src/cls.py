@@ -1,14 +1,12 @@
 # Class related scripts
-from __future__ import print_function as _, division as _
 
-
-def name(inst, this=False):
+def name(inst, this=False) -> str:
     if this:
         return inst.__name__
     return inst.__class__.__name__
 
 
-def class_repr(inst, *attrs, codelike=True, sep=', ', colon=False):
+def class_repr(inst, *attrs, codelike=True, sep=', ', colon=False) -> str:
     """
     For simple class repr formatting. If codelike then gives output of:
         cls_name(attr1=value1, attr2=value2)
@@ -17,7 +15,7 @@ def class_repr(inst, *attrs, codelike=True, sep=', ', colon=False):
 
     Use as follows:
 
-    >>> import cls
+    >>> from src import cls
     >>> class Example:
     ...     def __init__(self, *attrs):
     ...         self.att1, self.attr2 = attrs
@@ -39,7 +37,8 @@ def class_repr(inst, *attrs, codelike=True, sep=', ', colon=False):
     return repr_str.format(inst.__class__.__name__ + colon_s, attrs_repr)
 
 
-def class_equal(inst, other, *attrs, raise_miss_attr=True, force_same_cls=False):
+def class_equal(inst, other, *attrs, raise_miss_attr=True, force_same_cls=False) \
+        -> bool:
     """
     Checks if all the attrs given are equal for both inst and other.
     If `raise_miss_attr` an exception is raised if `other` does not have any of

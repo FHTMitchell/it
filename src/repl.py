@@ -2,18 +2,20 @@
 For use in the interactive REPL interpreter
 """
 
-from __future__ import print_function as _, division as _
-
 # imports for funcs
 import sys as _sys
 import os as _os
 import collections as _collections
 import pprint as _pprint
+import typing as _t
+
 from warnings import warn as _warn
 
-from .script import contains, AttrDict, Flag as _Flag
+from .boxes import AttrDict
+from .helpers import Flag as _Flag
+from .path import Path
 
-# Imports a reload function
+# Imports a reload function  -- leave for ease of converting
 try:
     from importlib import reload as _r  # 3.6
 except ImportError:
@@ -45,12 +47,7 @@ __default__ = (a_path, sub_path)     # defaults for it.path
 """
 
 try:
-    from pathlib import Path  # > 3.5
-except ImportError:
-    from .script import Path
-
-try:
-    from . import userpaths as _user_paths
+    from it import userpaths as _user_paths
 except ImportError:
     # TODO: warn the user?
     _user_paths = object()   # for empty __dict__
@@ -59,7 +56,7 @@ except ImportError:
 paths = {key: Path(value) for key, value in _user_paths.__dict__.items() if
             isinstance(value, (str, Path))
             and _os.path.isdir(str(value))
-            and key not in ('__default__', '__init__')
+            and key not in ('__default__', '__cd__')
         }
 paths = AttrDict(paths)
 
@@ -81,8 +78,9 @@ else:
 
 del _user_paths
 
+
 # For use in interpreter
-def path(paths=None, verbose=True):
+def setpath(paths: _t.List[Path] = None, *, verbose: bool = True) -> None:
     """
     Adds all paths in path_tuple to sys.path. If None will add every path in
     `def_paths`.
@@ -99,12 +97,14 @@ def path(paths=None, verbose=True):
             if verbose:
                 print('{} added to sys.path'.format(path))
 
-def reload(*modules):
+
+def reload(*modules) -> tuple:
     """Reload modules"""
     return tuple(map(_r, modules))
 
 
-def odict(d, bykey=True, reverse=False):
+def odict(d: dict, bykey: bool = True, reverse: bool = False) \
+        -> _collections.OrderedDict:
     """
     Returns a collections.OrderedDict which is automatically sorted from a dict,
     `d`. Sorts by key if `bykey` is True else by value and in ascending order
@@ -115,7 +115,7 @@ def odict(d, bykey=True, reverse=False):
     return _collections.OrderedDict(items)
 
 
-def pp(obj, ret=False):
+def pp(obj, ret: bool = False) -> _t.Union[_t.List[str], None]:
     """
     Shortcut for pprint.pprint(obj) except that since numpy arrays have their
     own pretty __str__ method, simply prints those.
@@ -129,6 +129,7 @@ def pp(obj, ret=False):
     if ret:
         return printout
     print(printout)
+
 
 # Formatting fancy classes
 _FLAG = _Flag('FMT')
@@ -288,6 +289,9 @@ class ld(object):
 ############################## pwd, cd, ls #####################################
 
 # path navigation tools, designed to mimic bash using fancy classes
+
+_PathType = _t.Union[Path, str]
+
 class _PWD(object):
     def __repr__(self):  # also makes __str__
         return _os.getcwd()
@@ -300,9 +304,16 @@ class _PWD(object):
             return str(self) == str(other)
         return NotImplemented
 
+    def __fspath__(self):
+        return str(self)
+
+    @property
+    def path(self):
+        return Path(self)
+
 
 class _CD(_PWD):  # __repr__ taken from pwd
-    def __call__(self, path='.'):
+    def __call__(self, path: _PathType = '.') -> '_CD':
         try:
             _os.chdir(path)
         except TypeError:
@@ -364,15 +375,20 @@ class _IT(object):
 class _LS(object):
 
     def __init__(self, _path='.'):
-        self._path = str(_path)
+        self._path: Path = Path(_path)
 
     def __repr__(self):
+
+        lst = list(self)
+        if not lst:
+            return '<empty>'
+
         return "\n".join(
             "{:>2} {}{}".format(index, elem, self._pathtype(elem))
-            for index, elem in enumerate(self)
+            for index, elem in enumerate(lst)
         )
 
-    def __call__(self, path='.'):
+    def __call__(self, path: _PathType = '.') -> '_LS':
 
         if path == '.': # so _LS objects can have non-'.' defaults
             path = self._path
@@ -380,34 +396,34 @@ class _LS(object):
         return self.__class__(path)
 
     def __iter__(self):
-        return iter(_os.listdir(self._path))
+        yield from self._path.iterdir()
 
     def __len__(self):
-        return len(_os.listdir(self._path))
+        return len(list(iter(self)))  # need iter to stop inf recursion
 
     def __getitem__(self, key):
         return list(self)[key]
 
-    def files(self, path='.'):
-        return [p for p in self(path) if _os.path.isfile(p)]
+    def files(self, path: _PathType = '.') -> _t.List[Path]:
+        return [p for p in self(path) if p.is_file()]
 
-    def dirs(self, path='.'):
-        return [p for p in self(path) if _os.path.isdir(p)]
+    def dirs(self, path: _PathType = '.') -> _t.List[Path]:
+        return [p for p in self(path) if p.is_dir()]
 
-    def _pathtype(self, obj):
-        elem = _os.path.join(self._path, obj)
-        if _os.path.isfile(elem):
+    def _pathtype(self, obj: _PathType) -> str:
+        elem = self._path / obj
+        if elem.is_file():
             return ''
-        elif _os.path.isdir(elem):
+        elif elem.is_dir():
             return '/'
-        elif _os.path.islink(elem):
+        elif elem.is_symlink():
             return '@'
         else:
             return '?'
 
 
 # and the visible instances
-pwd = _PWD()
+pwd = cwd = _PWD()
 cd = _CD()
 ls = _LS()
 cd.it = _IT()

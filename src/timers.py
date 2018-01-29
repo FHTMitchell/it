@@ -1,12 +1,10 @@
 # it/timers.py
 
-from __future__ import print_function as _, division as _
-
 import time
-import warnings
+import typing as _t
+from warnings import warn as _warn
 
-
-def timestamp(unix_time=None, show_zone=True):
+def timestamp(unix_time: int = None, show_zone: bool = True) -> str:
     """Show time (current if None) in the format 'yyyy-mm-dd HH:MM:SS [TZ]'"""
     if unix_time is None:
         unix_time = time.time()
@@ -16,7 +14,8 @@ def timestamp(unix_time=None, show_zone=True):
     return time.strftime(fmt, time.localtime(unix_time))
 
 
-def time_diff_repr(unix_start, unix_end=0, unit=None, sig=1, pad=0):
+def time_diff_repr(unix_start: int, unix_end: int = 0,
+                   unit: str = None, sig: int = 1, pad: int = 0) -> str:
     """
     Returns a string of the absolute difference between two times given in 
     appropriate units. The unit selection can be overridden with one of the 
@@ -70,7 +69,7 @@ class Clock(object):
     time = staticmethod(time.time)  # python really can be beautiful
 
     @staticmethod
-    def ftime(show_zone=True):
+    def ftime(show_zone: bool = True) -> str:
         return timestamp(show_zone=show_zone)
 
     def __repr__(self):
@@ -85,6 +84,10 @@ class Stopwatch(Clock):
     Call str to print how much time has past in reasonable units.
     """
 
+    _tic: int
+    tic: int
+    toc: int
+
     def __init__(self):
         self._tic = time.time()
 
@@ -92,11 +95,11 @@ class Stopwatch(Clock):
         self._tic = time.time()
 
     @property
-    def tic(self):
+    def tic(self) -> int:
         return self._tic
 
     @property
-    def toc(self):
+    def toc(self) -> int:
         return time.time() - self._tic  # faster to check _tic than tic
 
     def __call__(self, unit=None, sig=1, pad=0):
@@ -104,10 +107,10 @@ class Stopwatch(Clock):
         Depreciated - Saved for legacy reasons.
         """
         msg = "Will no longer be callable. Use __format__ instead."
-        warnings.warn(msg, DeprecationWarning)
+        _warn(msg, DeprecationWarning)
         return self.ftoc(unit, sig, pad)
 
-    def ftoc(self, unit=None, sig=1, pad=0):
+    def ftoc(self, unit: str = None, sig: int = 1, pad: int = 0):
         """
         Time since (re)start in a given unit to sig significant places. 
         If unit is None an appropriate unit is chosen.
@@ -185,7 +188,11 @@ class Stopwatch(Clock):
 
 
 class Timer(Stopwatch):
-    def __init__(self, checktime=5):
+
+    checktime: int
+    checker: Stopwatch
+
+    def __init__(self, checktime: int = 5):
         super(Timer, self).__init__()
         self.checktime = checktime
         self.checker = Stopwatch()
@@ -196,15 +203,18 @@ class Timer(Stopwatch):
                           timestamp(self.tic),
                           self.checktime)
 
-    def check(self):
+    def check(self) -> bool:
         "Checks if self.checktime has passed since self.check returned True"
         if self.checker.toc > self.checktime:
             self.checker.restart()
             return True
         return False
 
-    def check2(self, time):
-        "As check but takes a time (in seconds) argument instead"
+    def check2(self, time: int) -> bool:
+        """"As check but takes a time (in seconds) argument instead
+
+        Seperate function for efficiency
+        """
         if self.checker.toc > time:
             self.checker.restart()
             return True

@@ -1,20 +1,23 @@
 "Mathematical related scripts"
 
-from __future__ import division as _, print_function as _
-
 from functools import reduce as _reduce
 from operator import mul as _mul
 import collections as _collections
 import itertools as _itertools
-import numbers as _numbers
+import functools as _functools
+import numbers as _n
+import typing as _t
 
 import numpy as _np
 
-from .timers import Timer
+from .timers import Timer as _Timer
 
+
+_T = _t.TypeVar('_T')
 
 # helper functions with numpy
-def apply(func, array, dtype=None):
+def apply(func: _t.Callable, array: _np.ndarray, dtype: _np.dtype = None) \
+        -> _np.ndarray:
     array = _np.asarray(array)
     if dtype is None:
         dtype = array.dtype
@@ -22,7 +25,7 @@ def apply(func, array, dtype=None):
 
 
 # functions involving primes
-def isprime(n):
+def isprime(n: int) -> bool:
     "Returns True if n is prime. NOTE: Floats will always return True"
     # No assertion or conversion: had significant impact!
     if n < 4:
@@ -37,14 +40,14 @@ def isprime(n):
     return True
 
 
-def safe_isprime(n):
+def safe_isprime(n: int) -> bool:
     "Safe version of isprime which checks if n is an integer"
-    if not isinstance(n, _numbers.Integral):
+    if not isinstance(n, _n.Integral):
         raise ValueError('n is not an integral type: {!r}'.format(type(n).__name__))
     return isprime(n)
 
 
-def primelist(n):
+def primelist(n: int) -> _t.List[int]:
     """Returns a list of all primes less than n."""
     if n <= 2:
         return []
@@ -60,7 +63,7 @@ def primelist(n):
     return [index for index, val in enumerate(nums, 2) if val]
 
 
-def memeff_primelist(n):
+def memeff_primelist(n: int) -> _t.List:
     """Return a list of all primes less than n in a more memory efficient 
     manner than primelist (and faster for small values of n)."""
     if n <= 2:
@@ -79,13 +82,14 @@ def memeff_primelist(n):
     return primes
 
 
-def factorize(n, count=True):
+def factorize(n: int, count: bool = True) \
+        -> _t.Union[_t.List[_t.Tuple[int, int]], _t.List[int]]:
     """
     Returns the prime factors of `n`. Returns as a list of non-unique numbers if
     not count, else a list of tuples of the form (prime, power), power meaning
     the number of times it occurs.
     """
-    assert isinstance(n, _numbers.Integral)
+    assert isinstance(n, _n.Integral)
 
     possible_primes = primelist(_rootp1(n))  # <=sqrt(n) highest prime possible other than n
     m = n
@@ -108,10 +112,11 @@ def factorize(n, count=True):
 
     if not count:
         return p_factors
+    # noinspection PyArgumentList
     return sorted(_collections.Counter(p_factors).items(), key=lambda x: x[0])
 
 
-def num_divisors(n):  # Not very efficient 
+def num_divisors(n: int) -> int:  # Not very efficient
     """
     Gives the number of divisors n has.
     See http://mathschallenge.net/library/number/number_of_divisors
@@ -120,20 +125,21 @@ def num_divisors(n):  # Not very efficient
 
 
 # functions involving sums and products
-def prod(iterable):
+
+def prod(iterable: _t.Iterable[_T]) -> _T:
     """Return the productt of iterable"""
     return _reduce(_mul, iterable)
     # _mul replaces lambda x, y: x * y
 
 
-def _factorial(n):
+def _factorial(n: int) -> int:
     """factorial: Uses recursion (innefficient)"""
     if n <= 1:
         return 1
     return n*_factorial(n - 1)
 
 
-def factorial(n):
+def factorial(n: int) -> int:
     """factorial: Uses a generator"""
     if n > 1:
         return prod(range(1, n + 1))
@@ -141,7 +147,7 @@ def factorial(n):
     return 1
 
 
-def weighted_sum(iterable, weights=None):
+def weighted_sum(iterable, weights = None) -> float:
     """
     For a list of the form [(amount, weight), ...] returns the sum of each 
     amount multiplied by it's weight, which is then divided by the total weight.
@@ -164,7 +170,7 @@ def weighted_sum(iterable, weights=None):
 
 
 # functions involving factors
-def gcd(a, b, verbose=False):
+def gcd(a: int, b: int, *, verbose=False):
     """The greatest common denominator of a and b."""
     while b:
         a, b = b, a%b
@@ -173,7 +179,7 @@ def gcd(a, b, verbose=False):
 
 
 # functions involving averages
-def mean(vector):
+def mean(vector) -> float:
     "Returns the mean of vector"
     return sum(vector)/len(vector)
 
@@ -211,7 +217,7 @@ def mode(vector, singleton=True):
 ln = _np.log
 
 
-def log(n, base=10):
+def log(n: _n.Real, base: int = 10) -> float:
     """The log of n in a given base"""
     if base is None:
         return ln(n)
@@ -219,12 +225,13 @@ def log(n, base=10):
 
 
 # functions involving vectors / linear algebra
-def unit(v):
+def unit(v) -> _np.ndarray:
     "Gives the unit vector (the direction) of v"
     return _np.divide(v, _np.linalg.norm(v))
 
 
-def rotmat(angle, axis=None, direction='ccw', ndim=3):
+def rotmat(angle: float, axis: str = None, direction: str = 'ccw',
+           ndim: int = 3) -> _np.ndarray:
     """
     Calculates the rotation matrix for the given number of dimensions (2 or 3).
     For the three dimensional version, an axis must be specified (either 'x',
@@ -277,31 +284,43 @@ def diagonalise(M, imaglim=1e6, maxcond=1e5, debug=False):
     if maxcond:
         assert abs(_np.linalg.cond(evecs)) <= maxcond, "M is probably not diagonalisable"
     if imaglim:
+        # noinspection PyTypeChecker
         if _np.all(abs(D.imag) <= imaglim):
             return D.real
     return D
 
 
 # degree trig
-def _use_deg(f, arc=False):
+def _use_deg(f: _t.Callable, arc: bool = False) -> _t.Callable:
+    """Convert a trignometric which uses radians to degrees
+
+    If an `arc` function, make sure `arc` is set to True
+    """
+
     if not arc:
         def df(*args, **kwargs):
+            # Need to convert all numeric input types to degrees
             args = list(args)
             for index, value in enumerate(args):
                 try:
-                    args[index] = _np.radians(value)
+                    args[index] = _np.deg2rad(value)
                 except TypeError:
                     pass
             for key, value in kwargs.items():
+                if key == 'out':
+                    continue  # ignore
                 try:
-                    kwargs[key] = _np.radians(value)
+                    kwargs[key] = _np.deg2rad(value)
                 except TypeError:
                     pass
+            # and return
             return f(*args, **kwargs)
+
     else:
         def df(*args, **kwargs):
             return _np.rad2deg(f(*args, **kwargs))
-    return df
+
+    return _functools.wraps(f)(df)
 
 
 sind = _use_deg(_np.sin)
@@ -313,8 +332,9 @@ arctand = _use_deg(_np.arctan, True)
 arctan2d = _use_deg(_np.arctan2, True)
 
 
-# Other functions
-def fib(a=1, b=1):
+# Generators
+
+def fib(a: int = 1, b: int = 1) -> _t.Iterator[int]:
     "Generator for the Fibonacci sequence."
     a, b = sorted((a, b))
     yield a
@@ -324,7 +344,7 @@ def fib(a=1, b=1):
         yield b
 
 
-def triangles(n=2, stop=None):
+def triangles(n: int = 2, stop: int = None) -> _t.Iterator[int]:
     "Generates the (first `stop`) nth dimensional triangle numbers."
     if n == 1:
         if stop is None:
@@ -338,22 +358,36 @@ def triangles(n=2, stop=None):
             yield total
 
 
-def ispalindrome(n):
+# Misc functions
+
+def ispalindrome(n) -> bool:
     return str(n) == str(n)[::-1]
 
 
-def _rootp1(n):
+def precision(x: _n.Real) -> int:
+    """The precision of x"""
+    if isinstance(x, float):
+        decimal_part = repr(x).split('.')[1]
+        return len(decimal_part) if decimal_part != '0' else 0
+    elif isinstance(x, int):
+        return 0
+    else:
+        msg = 'x must be a real number, not {}'.format(type(x).__name__)
+        raise TypeError(msg)
+
+
+def _rootp1(n: float) -> int:
     'returns the truncated square root of n plus 1 for use in range'
     return int(n**0.5) + 1
 
 
 # Verbose versions - might put in separate namespace
 
-def verbose_primelist(n):
+def verbose_primelist(n: int) -> _t.List[int]:
     """Return a list of all primes less than n in a more memory efficient 
     manner than primelist. Also faster for small values of n]."""
     # VERBOSE SETUP
-    timer = Timer(5)
+    timer = _Timer(5)
     print('Finding primes up to {:,}'.format(n))
 
     if n <= 2:
@@ -379,13 +413,14 @@ def verbose_primelist(n):
     return primes
 
 
-def verbose_factorize(n, count=True):
+def verbose_factorize(n: int, count: bool = True) \
+        -> _t.Union[_t.List[_t.Tuple[int, int]], _t.List[int]]:
     """
     Verbose form of factorize
     """
-    assert isinstance(n, _numbers.Integral)
+    assert isinstance(n, _n.Integral)
     # VERBOSE SETUP
-    timer = Timer(5)
+    timer = _Timer(5)
     print("Finding prime factors of {:,}".format(n))
 
     possible_primes = verbose_primelist(_rootp1(n))  # <=sqrt(n) highest prime possible other than n

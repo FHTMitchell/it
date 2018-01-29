@@ -1,10 +1,62 @@
 # iters.py
 
-import collections
-import operator
-import random
+import collections as _collections
+import operator as _operator
+import random as _random
+import typing as _t
 from itertools import *
 
+_FLAG = object()
+
+# Mine
+
+def isiterable(obj, *, include_str=True, include_bytes=True) -> bool:
+    """Returns true if obj is iterable"""
+    if not include_str and isinstance(obj, str):
+        return False
+    if not include_bytes and isinstance(obj, bytes):
+        return False
+    return hasattr(obj, '__iter__')
+
+
+def flatten(a: _t.Iterable) -> _t.Iterator:
+    """generator of flattened n-deep iterable (excluding str/bytes) a."""
+    for elem in a:
+        if not isinstance(elem, (str, bytes)):
+            try:
+                yield from flatten(elem)
+            except TypeError:
+                yield elem
+        else:
+            yield elem
+
+
+def flatten_fast(a: _t.Iterable) -> _t.Iterator:
+    """generator of flattened n-deep iterable (including str/bytes) a."""
+    for elem in a:
+        try:
+            yield from flatten_fast(elem)
+        except TypeError:
+            yield elem
+
+
+# itertools recipes (edited)
+
+def nth(iterable, n, default=_FLAG):
+    "Returns the nth item or a default value"
+    try:
+        return next(islice(iterable, n, None))
+    except StopIteration:
+        if default is _FLAG:
+            raise IndexError('Index out of range')
+        return default
+
+
+def flatten1deep(listOfLists):
+    "Flatten one level of nesting"
+    return chain.from_iterable(listOfLists)
+
+# itertools recpes (as given)
 
 def take(n, iterable):
     "Return first n items of the iterable as a list"
@@ -20,7 +72,7 @@ def tail(n, iterable):
     """Return an iterator over the last n items
     # tail(3, 'ABCDEFG') --> E F G
     """
-    return iter(collections.deque(iterable, maxlen=n))
+    return iter(_collections.deque(iterable, maxlen=n))
 
 
 def consume(iterator, n):
@@ -28,15 +80,11 @@ def consume(iterator, n):
     # Use functions that consume iterators at C speed.
     if n is None:
         # feed the entire iterator into a zero-length deque
-        collections.deque(iterator, maxlen=0)
+        _collections.deque(iterator, maxlen=0)
     else:
         # advance to the empty slice starting at position n
         next(islice(iterator, n, n), None)
 
-
-def nth(iterable, n, default=None):
-    "Returns the nth item or a default value"
-    return next(islice(iterable, n, None), default)
 
 
 def all_equal(iterable):
@@ -50,12 +98,12 @@ def quantify(iterable, pred=bool):
     return sum(map(pred, iterable))
 
 
-def padnone(iterable):
-    """Returns the sequence elements and then returns None indefinitely.
+def pad(iterable, obj=None):
+    """Returns the sequence elements and then returns obj indefinitely.
 
     Useful for emulating the behavior of the built-in map() function.
     """
-    return chain(iterable, repeat(None))
+    return chain(iterable, repeat(obj))
 
 
 def ncycles(iterable, n):
@@ -64,12 +112,7 @@ def ncycles(iterable, n):
 
 
 def dotproduct(vec1, vec2):
-    return sum(map(operator.mul, vec1, vec2))
-
-
-def flatten(listOfLists):
-    "Flatten one level of nesting"
-    return chain.from_iterable(listOfLists)
+    return sum(map(_operator.mul, vec1, vec2))
 
 
 def repeatfunc(func, times=None, *args):
@@ -150,7 +193,7 @@ def unique_justseen(iterable, key=None):
     # unique_justseen('ABBCcAD', str.lower) --> A B C A D
     """
     # had to add `operator.`
-    return map(next, map(operator.itemgetter(1), groupby(iterable, key)))
+    return map(next, map(_operator.itemgetter(1), groupby(iterable, key)))
 
 
 def iter_except(func, exception, first=None):
@@ -196,21 +239,21 @@ def first_true(iterable, default=False, pred=None):
 def random_product(*args, repeat=1):
     "Random selection from itertools.product(*args, **kwds)"
     pools = [tuple(pool) for pool in args]*repeat
-    return tuple(random.choice(pool) for pool in pools)
+    return tuple(_random.choice(pool) for pool in pools)
 
 
 def random_permutation(iterable, r=None):
     "Random selection from itertools.permutations(iterable, r)"
     pool = tuple(iterable)
     r = len(pool) if r is None else r
-    return tuple(random.sample(pool, r))
+    return tuple(_random.sample(pool, r))
 
 
 def random_combination(iterable, r):
     "Random selection from itertools.combinations(iterable, r)"
     pool = tuple(iterable)
     n = len(pool)
-    indices = sorted(random.sample(range(n), r))
+    indices = sorted(_random.sample(range(n), r))
     return tuple(pool[i] for i in indices)
 
 
@@ -218,5 +261,5 @@ def random_combination_with_replacement(iterable, r):
     "Random selection from itertools.combinations_with_replacement(iterable, r)"
     pool = tuple(iterable)
     n = len(pool)
-    indices = sorted(random.randrange(n) for i in range(r))
+    indices = sorted(_random.randrange(n) for i in range(r))
     return tuple(pool[i] for i in indices)
