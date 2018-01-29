@@ -1,7 +1,6 @@
 "Random value generating functions"
 
 import typing as _t
-
 import string as _string
 import numpy as _np
 
@@ -40,7 +39,7 @@ def rfloat(size: _Size = None, low: int = 0, high: int = 1) -> _FloatArray:
     return _np.random.random(size)*(high - low) + low
 
 
-_T = _t.TypeVar('_T')
+_T = _t.TypeVar('T')
 _TArray = _t.Union[_np.ndarray, _T]
 def rchoice(iterable: _t.Iterable[_T], size: _Size = None,
             p: _t.Iterable[float] = None) -> _TArray:

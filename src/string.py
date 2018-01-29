@@ -6,7 +6,7 @@ import itertools as _itertools
 import time as _time
 import keyword as _keyword
 
-from src import iters as _iters
+from . import iters as _iters
 
 from .timers import Timer as _Timer
 

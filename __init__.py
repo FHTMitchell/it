@@ -13,7 +13,7 @@ Tools for (* implies attributes can be imported directly from it):
     helpers - misc functions and classes for use in projects
     test    - a bunch of initialised stdlib and numpy objects for testing
 
-A bunch of commands for pyhon 3.6 and up
+A bunch of commands for python 3.6 and up
 
 No longer will support python 2.7 - 3.5 because I can no longer be bothered
 """
@@ -22,9 +22,7 @@ from warnings import warn as _warn
 from sys import version_info as ver
 
 if ver <= (3, 6):
-    _warn("Python version 3.6.0 or greater is expected, not {0}"
-          .format('.'.join(ver[:3]))
-         )
+    _warn("Python version 3.6.0 or greater is expected, not %d.%d.%d" % ver[:3])
 
 try:
     from .src.repl import *

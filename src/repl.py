@@ -49,20 +49,19 @@ __default__ = (a_path, sub_path)     # defaults for it.path
 try:
     from it import userpaths as _user_paths
 except ImportError:
-    # TODO: warn the user?
-    _user_paths = object()   # for empty __dict__
+    paths = {}
+    default_paths = ()
+else:
+    paths = {key: Path(value) for key, value in _user_paths.__dict__.items() if
+                isinstance(value, (str, Path))
+                and _os.path.isdir(str(value))
+                and key not in ('__default__', '__cd__')
+            }
+    paths = AttrDict(paths)
 
-
-paths = {key: Path(value) for key, value in _user_paths.__dict__.items() if
-            isinstance(value, (str, Path))
-            and _os.path.isdir(str(value))
-            and key not in ('__default__', '__cd__')
-        }
-paths = AttrDict(paths)
-
-default_paths = _user_paths.__dict__.get('__default__', ())
-if isinstance(default_paths, str):
-    default_paths = (default_paths,)
+    default_paths = _user_paths.__dict__.get('__default__', ())
+    if isinstance(default_paths, str):
+        default_paths = (default_paths,)
 
 try:
     # noinspection PyUnresolvedReferences

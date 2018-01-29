@@ -124,7 +124,7 @@ def iter_index(a: _t.Sequence, key: _t.Union[int, slice],
 
 
 def default_namedtuple(typename: str, field_names: _t.Union[str, _t.Iterable[str]],
-                       default_values: tuple = ()) -> _t.NamedTuple:
+                       default_values: tuple = ()) -> _t.Callable:
     """
     Returns a collections.namedtuple except with default_values.
     default_values can be specified with a tuple of length < len(field_names) or

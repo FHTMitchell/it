@@ -7,7 +7,4 @@ tests for the it module
 import pytest
 import it
 
-if __name__ == '__main__':
-    # for debugging
-    pass
-    print(it.paths)
+pass

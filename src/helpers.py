@@ -3,7 +3,7 @@
 
 import typing as _t
 
-from src import cls as _cls
+from . import cls as _cls
 
 try:
     import pandas as pd
