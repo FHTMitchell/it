@@ -20,9 +20,9 @@ def isiterable(obj, *, include_str=True, include_bytes=True) -> bool:
 
 
 def flatten(a: _t.Iterable) -> _t.Iterator:
-    """generator of flattened n-deep iterable (excluding str/bytes) a."""
+    """generator of flattened n-deep iterable (excluding str) a."""
     for elem in a:
-        if not isinstance(elem, (str, bytes)):
+        if not isinstance(elem, str):
             try:
                 yield from flatten(elem)
             except TypeError:
@@ -31,14 +31,17 @@ def flatten(a: _t.Iterable) -> _t.Iterator:
             yield elem
 
 
-def flatten_fast(a: _t.Iterable) -> _t.Iterator:
-    """generator of flattened n-deep iterable (including str/bytes) a."""
+def _flatten_fast(a: _t.Iterable) -> _t.Iterator:
+    """generator of flattened n-deep iterable a (types are not checked).
+
+    WARNING: Will have infinite recursion if any element is str object
+    """
     for elem in a:
         try:
-            yield from flatten_fast(elem)
+            yield from _flatten_fast(elem)
         except TypeError:
             yield elem
-
+flatten.fast = _flatten_fast
 
 # itertools recipes (edited)
 
@@ -55,6 +58,8 @@ def nth(iterable, n, default=_FLAG):
 def flatten1deep(listOfLists):
     "Flatten one level of nesting"
     return chain.from_iterable(listOfLists)
+flatten.one_deep = flatten1deep
+
 
 # itertools recpes (as given)
 

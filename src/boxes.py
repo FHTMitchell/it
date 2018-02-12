@@ -12,29 +12,23 @@ from . import string as _string
 
 _T = _t.TypeVar('T')
 
-class contains(int):  # subclass int so understood as bool
-    """namespace for contains.all() and contains.any()
 
-    Calling contains() is a wrapper for contains.any()
-    """
+# contains
 
-    @staticmethod
-    def any(obj: _t.Collection, *contents) -> bool:
-        """Returns True, if any of contents are in obj, else False"""
-        return any((c in obj) for c in contents)
+def _contains_any(obj: _t.Collection, *contents) -> bool:
+    """Returns True, if any of contents are in obj, else False"""
+    return any((c in obj) for c in contents)
 
-    @staticmethod
-    def all(obj: _t.Collection, *contents) -> bool:
-        """Returns True, if all of contents are in obj, else False"""
-        return all((c in obj) for c in contents)
+def _contains_all(obj: _t.Collection, *contents) -> bool:
+    """Returns True, if all of contents are in obj, else False"""
+    return all((c in obj) for c in contents)
 
-    # Alias contains() as contains.any()
-    # noinspection PyInitNewSignature
-    def __new__(cls, obj, *contents):
-        return cls.any(obj, *contents)
+contains = _contains_any
+contains.any = _contains_any
+contains.all = _contains_all
 
-
-def remove(container: _t.Container, *elems) -> _t.Container:
+_C = _t.TypeVar('C', str, list)
+def remove(container: _C, *elems) -> _C:
     """ Remove elems from containers (str and list supported)
 
     For each elem in elems, if elem in container, remove from container and
