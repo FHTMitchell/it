@@ -63,19 +63,19 @@ else:
     if isinstance(default_paths, str):
         default_paths = (default_paths,)
 
-try:
-    # noinspection PyUnresolvedReferences
-    _nwd = _user_paths.__cd__
-    _os.chdir(_nwd)
-    print('Changed CWD to {!s}'.format(_nwd))
-except AttributeError:
-    pass
-except OSError as err:
-    _warn(err)
-else:
-    del _nwd
+    try:
+        # noinspection PyUnresolvedReferences
+        _nwd = _user_paths.__cd__
+        _os.chdir(_nwd)
+        print('Changed CWD to {!s}'.format(_nwd))
+    except AttributeError:
+        pass
+    except OSError as err:
+        _warn(err)
+    else:
+        del _nwd
 
-del _user_paths
+    del _user_paths
 
 
 # For use in interpreter
