@@ -10,6 +10,38 @@ try:
 except ImportError:
     pass
 
+class _Assert:
+
+    def __init__(self, on=True):
+        self.on = bool(on)
+
+    def __repr__(self):
+        return f'<_Assert: on={self.on}>'
+
+    def __call__(self, test_, **kwargs):
+        """
+        Better assert statement
+
+        Same as `assert test` except each kwarg is printed out as a
+        key value pair for debugging.
+
+        >>> a = 0
+        >>> b = 3
+        >>> asrt(a < 4 < b, a=a, b=b)
+        AssertionError:
+            a: 0
+            b: 3
+
+        Can turn off all asrt checks by setting `asrt.on` to `False`.
+        """
+        if self.on and not test_:
+            msgs = [f'{k}: {v!r}' for k, v in kwargs.items()]
+            msg = ('\n\t' if len(msgs) > 1 else '') + ',\n\t'.join(msgs)
+            raise AssertionError(msg)
+
+asrt = _Assert()  # instance to interact with _Assert
+
+
 class Flag(object):
     def __init__(self, name='', showid=False):
         assert isinstance(name, str), name

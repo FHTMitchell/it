@@ -5,18 +5,31 @@ import sys as _sys
 import itertools as _itertools
 import time as _time
 import keyword as _keyword
+import typing as _t
+import numbers as _n
 
 from . import iters as _iters
-
 from .timers import Timer as _Timer
+from .cls import name as _cls_name
 
 
-def pluralize(n, singular, plural, prefix=""):
+# pluralizing
+
+def pluralize(n: int, singular: str, plural: str, prefix: str = "") -> str:
     """Returns singular if n == 1 else plural"""
     return prefix + (singular if n == 1 else plural)
 
 
-def join(itr, sep=""):
+def pluralize_factory(singular: str, plural: str, prefix: str = "") \
+        -> _t.Callable[[int], str]:
+    def inner(n: int):
+        return pluralize(n, singular, plural, prefix)
+    return inner
+
+
+# Stuff to do with splitting and joining strings
+
+def join(itr: _t.Iterable[_t.Any], sep: str = "") -> str:
     """ Join str of each element of itr into a string joined by sep
 
     Equivalent to sep.join(map(str, itr))
@@ -25,35 +38,48 @@ def join(itr, sep=""):
     # Use str.join so if sep is not a str TypeError (not AttrError) is raised
     return str.join(sep, map(str, itr))
 
-def separator(s, sep, n):
-    """ Split string s with sep every n characters (form the right) """
+
+def separator(s: str, sep: str, n: int) -> str:
+    """ Split string s with sep every n characters (from the right) """
     assert isinstance(sep, str), sep
     assert isinstance(n, int), n
-
     a = []
     for i, c in enumerate(reversed(s)):
         a.append(c)
         if i % n == n - 1:
             a.append(sep)
-    return join(a)
+    return join(reversed(a))
 
 
-def _splitter(str_iter, sep):
-    return _iters.flatten(s.split(sep) for s in str_iter)
+def _splitter(str_iter: _t.Iterable[str], sep: _t.Union[str, None]) \
+        -> _t.Iterator[str]:
+    """Returns flat iterator of all strings split by sep that are in
+    `str_iter`, an iterable of strigs"""
+    if sep is None:
+        itr = map(str.split, str_iter)
+    else:
+        itr = (s.split(sep) for s in str_iter)
+    return _iters.flatten1deep(itr)
 
 
-def splitall(s, seps, strip=False, filter_empty=False):
+def splitall(s: str, seps: _t.Iterable[_t.Union[str, None]], strip: bool = False,
+             remove_empty: bool = False) -> _t.List[str]:
+    """Split a string by all seperators in seps. If None in seps,
+    remove whitespace as well"""
     s = [s]
     for sep in seps:
         s = _splitter(s, sep)
     if strip:
         s = map(str.strip, s)
-    if filter_empty:
+    if remove_empty:
         s = filter(bool, s)
     return s
 
 
-def overwrite(text=None, end=' ', pause=0, linelen=79):
+# overwriting in consoles
+
+def overwrite(text: str = None, end: str = ' ', pause: float = 0,
+              linelen: int = 79) -> None:
     """ Overwrite the last line in stdout
 
     Returns None so do not print, will automatically print to stdout. Use pause
@@ -67,7 +93,7 @@ def overwrite(text=None, end=' ', pause=0, linelen=79):
     _time.sleep(pause)
 
 
-def load_icon(pause=1, timelimit=None):
+def load_icon(pause: int = 1, timelimit: float = None) -> None:
     """A spinning load icon"""
     timer = _Timer()
     cycle = _itertools.cycle('\|/-')
@@ -79,9 +105,10 @@ def load_icon(pause=1, timelimit=None):
     overwrite('  ')
 
 
+# formatting numbers
 
-
-def at_precision(of, pad=0, fmt='g'):
+def at_precision(of: _n.Real, pad: int = 0, fmt: str = 'g') \
+        -> _t.Callable[[_n.Real], str]:
     """ Build function which will format it's arguments to the precision of `of`.
 
     Return a function that formats a value v according to the specifier:
@@ -90,17 +117,35 @@ def at_precision(of, pad=0, fmt='g'):
     of is the value which is the desired precision if a float, otherwise just the precision.
     fmt is either 'f', 'g', or 'e'. See python format specifiers.
     """
-    p = len(str(of).split('e')[0].split('.')[-1]) if isinstance(of, float) else of
+    if isinstance(of, float):
+        mantissa = str(of).split('e')[0]
+        if fmt == 'g':
+            p = len(mantissa[-1]) - 1
+        elif fmt == 'f':
+            p = len(mantissa.split('.')[-1])
+        else:
+            raise ValueError(
+                    f"If `of` is a float, `fmt` must be 'f' or 'g', not {fmt!r}")
+    elif isinstance(of, int):
+        p = of
+    else:
+        raise TypeError(f'`of` must be a float or an int, not {_cls_name(of)}')
 
-    def inner(v):
+    def inner(v: _n.Real) -> str:
         return format(v, '>{pad}.{p}{fmt}'.format(pad=pad, p=p, fmt=fmt))
 
     return inner
 
 
+def fmt_float_no_trailing_zeros(x: _n.Real) -> str:
+    return ('%f' % x).rstrip('0').rstrip('.')
 
-def isidentifier(s):  # used in AttrDict
+
+# tests
+
+def isidentifier(s: str) -> bool:  # used in AttrDict
     """
     Returns True is s (a str) is a valid python identifier (a variable name)
     """
     return str.isidentifier(s) and not _keyword.iskeyword(s)
+

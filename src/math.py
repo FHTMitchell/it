@@ -13,6 +13,8 @@ import numpy as _np
 from .timers import Timer as _Timer
 from .boxes import default_namedtuple as _default_namedtuple
 
+# noinspection PyUnresolvedReferences
+from math import pi, e
 
 _T = _t.TypeVar('T')
 
