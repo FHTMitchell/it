@@ -77,7 +77,7 @@ class C(object):
         self.__mangled = value
 
     @mangled.deleter
-    def mangled(self, value):
+    def mangled(self):
         del self.__mangled
 
     def method(self, y=''):

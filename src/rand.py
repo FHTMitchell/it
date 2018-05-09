@@ -4,9 +4,14 @@ import typing as _t
 import string as _string
 import numpy as _np
 
-_Size = _t.Union[_t.Tuple[int], int]
+_Size = _t.Union[_t.Tuple[int, ...], int, None]
 
-_IntArray = _t.Union[_np.ndarray, int]
+
+def _t_array(_type):
+    return _t.Union[_np.ndarray, _type, _t.Iterable[_type]]
+
+
+_IntArray = _t_array(int)
 def rint(size: _Size = None, low: int = 0, high: int = 10) -> _IntArray:
     """
     Gives an array of integers between 'low' and 'high' (exclusive) of size 
@@ -15,8 +20,8 @@ def rint(size: _Size = None, low: int = 0, high: int = 10) -> _IntArray:
     return _np.random.randint(low, high, size)
 
 
-def rstr(size: int = 1, spaces: int = 0, caps: bool = False, underscores: int = 0) \
-        -> str:
+def rstr(size: int = 1, spaces: int = 0, caps: bool = False,
+         underscores: int = 0) -> str:
     """
     Gives a random string of lower-case letters plus, optionally:
     spaces (give a number to specify frequency), cpas or underscores.
@@ -31,7 +36,7 @@ def rstr(size: int = 1, spaces: int = 0, caps: bool = False, underscores: int = 
     return ''.join(rchoice(letters, size=size))
 
 
-_FloatArray = _t.Union[_np.ndarray, float]
+_FloatArray = _t_array(float)
 def rfloat(size: _Size = None, low: int = 0, high: int = 1) -> _FloatArray:
     """
     Gives an array of floats between low and high (exclusive) of size 'size'
@@ -40,7 +45,7 @@ def rfloat(size: _Size = None, low: int = 0, high: int = 1) -> _FloatArray:
 
 
 _T = _t.TypeVar('T')
-_TArray = _t.Union[_np.ndarray, _T]
+_TArray = _t_array(_T)
 def rchoice(iterable: _t.Iterable[_T], size: _Size = None,
             p: _t.Iterable[float] = None) -> _TArray:
     """
@@ -50,3 +55,6 @@ def rchoice(iterable: _t.Iterable[_T], size: _Size = None,
     """
     # Is this better than random.choice?
     return _np.random.choice(list(iterable), size=size, p=p)
+
+x = rint()
+x.bit_length()

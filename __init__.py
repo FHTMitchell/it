@@ -27,7 +27,7 @@ if ver <= (3, 6):
 try:
     from .src.repl import *
     from .src import (helpers, timers, cls, iters as ers, string, test, math, \
-                      boxes, path, rand)
+                      boxes, path, rand, arrays)
     from .src.rand import *
 except ImportError as e:
     _warn("Unable to load module: {!s}".format(e))

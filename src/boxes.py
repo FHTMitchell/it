@@ -5,12 +5,14 @@ import itertools as _itertools
 import collections as _collections
 import bisect as _bisect
 import typing as _t
+from collections import abc as _abc
 
 from . import cls as _cls
 from . import iters as _iters
 from . import string as _string
 
 _T = _t.TypeVar('T')
+_T_co = _t.TypeVar('T_co')
 
 
 # contains
@@ -26,6 +28,17 @@ def _contains_all(obj: _t.Collection, *contents) -> bool:
 contains = _contains_any
 contains.any = _contains_any
 contains.all = _contains_all
+
+# sets
+
+def intersection(*itrs: _t.Iterable) -> set:
+    return set.intersection(*map(set, itrs))
+
+def union(*itrs: _t.Iterable) -> set:
+    return set().union(*itrs)
+
+
+# other
 
 _C = _t.TypeVar('C', str, list)
 def remove(container: _C, *elems) -> _C:
@@ -68,7 +81,7 @@ def _ordered_unique(a):
 
 def iter_index(a: _t.Sequence, key: _t.Union[int, slice],
                *, return_slice_type: _T = tuple) -> _t.Any:
-    """Finds the index or slice of a if a has __len__ method"""
+    """Finds the index or slice of `a` if `a` has __len__ method"""
 
     assert hasattr(a, '__len__'), 'Need len method for advanced indexing'
     assert hasattr(a, '__reversed__'), 'Need reversed method for advanced indexing'
@@ -118,7 +131,8 @@ def iter_index(a: _t.Sequence, key: _t.Union[int, slice],
 
 
 def default_namedtuple(typename: str, field_names: _t.Union[str, _t.Iterable[str]],
-                       default_values: tuple = ()) -> _t.Callable:
+                       default_values: tuple = ()) -> _t.Callable\
+        :
     """
     Returns a collections.namedtuple except with default_values.
     default_values can be specified with a tuple of length < len(field_names) or
@@ -145,14 +159,16 @@ def bisect(a, elem, low=0, high=None, right=True):
     return _bisect.bisect_right(*args) if right else _bisect.bisect_left(*args)
 
 
-class AttrDict(_collections.OrderedDict, _collections.abc.Sequence):
+class AttrDict(_collections.OrderedDict, _t.MutableMapping[str, _T_co],
+               _t.Sequence[_T_co]):
     """Attribute-access mapping - OrderedDict + namedtuple
 
     A dictionary which can be accessed and edited through the attribute notation,
-    hence `ad['x'] is ad.x`. Works for getting, setting and deleting. Used in
-    place of:
-    * `return collections.namedtuple(name, keys)(*values)`,
-    * `return dict(k1=v1, k2=v2)`
+    hence `ad['x'] is ad.x`. Works for getting, setting and deleting. Used as
+      `return AttrDict(k1=v1, k2=v2) -> res.k1 OR res[0] OR res['k1']`
+    in place of:
+    * `return collections.namedtuple(name, keys)(*values)` -> res.k1 OR res[0],
+    * `return dict(k1=v1, k2=v2) -> res['k1']`
     for the user to be able to specify both the ordering and names of returned
     values.
 
@@ -176,12 +192,14 @@ class AttrDict(_collections.OrderedDict, _collections.abc.Sequence):
 
     # update to inherit only from dict (since dict now ordered)?
 
+    __slots__ = ()
+
     class KeyAttrError(KeyError, AttributeError):
         "Exception which inherits from both KeyError and AttributeError"
         pass
 
     def __init__(self, *args, **kwargs):
-        # too complicated to do parsing ourselves, use OrderedDict
+        # too complicated to do parsing ourselves, use OrderedDict's
         setup_d = _collections.OrderedDict(*args, **kwargs)
         for key in setup_d.keys():
             self._test(key)
@@ -191,15 +209,21 @@ class AttrDict(_collections.OrderedDict, _collections.abc.Sequence):
     def __str__(self):
         # Will not be ordered in py_ver < 3.5
         # noinspection PyCallByClass
-        return repr(dict(sorted(self.items()))).replace(',', ',\n')
+        return (f'{_cls.name(self)}(\n' +
+                ',\n'.join(f' {k}={v!r}' for k, v in self.items()) +
+                '\n)')
 
-    def __iter__(self):
+    def __iter__(self) -> _t.Iterator[_T_co]:
         return iter(self.values())
 
-    def __reversed__(self):
+    def __reversed__(self) -> _t.Iterator[_T_co]:
         return reversed(self.values())
 
-    def __getitem__(self, key: _t.Union[int, str, slice]):
+    @_t.overload
+    def __getitem__(self, key: slice) -> _t.Tuple[_T_co, ...]:
+        pass
+
+    def __getitem__(self, key: _t.Union[int, str]) -> _T_co:
 
         if isinstance(key, str):
             return super().__getitem__(key)
@@ -211,6 +235,7 @@ class AttrDict(_collections.OrderedDict, _collections.abc.Sequence):
             return _iters.nth(self, key)
         elif isinstance(key, slice):
             # quicker than iter_index but less memory efficients
+            # noinspection PyTypeChecker
             return tuple(self)[key]
         else:
             msg = "key ({!r}) must be type str, int or slice; not {}"
@@ -218,20 +243,20 @@ class AttrDict(_collections.OrderedDict, _collections.abc.Sequence):
 
     # namedtuple/dict-like methods
     # noinspection PyMethodOverriding
-    def __setitem__(self, key: _t.Union[int, str, slice], value):
+    def __setitem__(self, key: str, value: _T_co):
         self._test(key)
         super().__setitem__(key, value)
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> _T_co:
         try:
             return self[attr]
         except KeyError:
             raise self.KeyAttrError(attr)
 
-    def __setattr__(self, attr, value):
+    def __setattr__(self, attr: str, value: _T_co):
         self[attr] = value
 
-    def __delattr__(self, attr):
+    def __delattr__(self, attr: str):
         try:
             del self[attr]
         except KeyError:
@@ -241,7 +266,7 @@ class AttrDict(_collections.OrderedDict, _collections.abc.Sequence):
         except AttributeError:
             raise self.KeyAttrError(attr)
 
-    def _test(self, key: str):
+    def _test(self, key: str) -> None:
         "Check if the key is a str and does not conflict with dict attrs"
         if not isinstance(key, str):
             msg = "key ({!r}) needs to be a str, not {!r}"
@@ -253,7 +278,177 @@ class AttrDict(_collections.OrderedDict, _collections.abc.Sequence):
             msg = "{!r} is already a static attribute of {}"
             raise self.KeyAttrError(msg.format(key, type(self).__name__))
 
+class Node(_t.Generic[_T_co]):
 
+    __slots__ = ('value', 'next')
+
+    value: _T_co
+    next: '_t.Optional[Node[_T_co]]'
+
+    # Don't define next as generic
+    def __init__(self, value: _T_co, next: 'Node' = None):
+        self.value = value
+        self.next = next
+
+    def __repr__(self):
+        next_id = 'None' if self.next is None else f'<Node at {hex(id(self.next))}>'
+        return f'Node({self.value}, {next_id})'
+
+    def __eq__(self, other: 'Node[_T_co]'):
+        if isinstance(other, Node):
+            return self is other
+        return NotImplemented
+
+    def copy(self) -> 'Node[_T_co]':
+        return self.__class__(self.value, self.next)
+
+
+class LinkedList(_t.MutableSequence[_T_co]):
+    """
+    A linked list implementation for faster appending and popping to the front
+    and end of a list.
+    """
+
+    __slots__ = ('_first', '_last', '_length')
+
+    _first: _t.Optional[Node[_T_co]]
+    _last: _t.Optional[Node[_T_co]]
+    _length: int
+
+    def __init__(self):
+        self._first = None
+        self._last = None
+        self._length = 0
+
+    def clear(self) -> None:
+        self.__init__()
+
+    def append(self, x: _T_co) -> None:
+        if self._first is None:
+            self._first = Node(x, None)
+            self._last = self._first
+        elif self._last is self._first:
+            self._last = Node(x, None)
+            self._first.next = self._last
+        else:
+            self._last.next = Node(x, None)
+            self._last = self._last.next
+        self._length += 1
+
+    def insert(self, index: int, value: _T_co) -> None:
+        if index == len(self):
+            self.append(value)
+        elif index == 0:
+            self.append_left(value)
+        else:
+            self._assert_index(index)
+            node = Node(value, self._nth_node(index))
+            self._nth_node(index - 1).next = node
+            self._length += 1
+
+    def pop(self, index: int = -1) -> _T_co:
+        if not len(self):
+            raise IndexError("pop from empty list")
+        if index == -1:
+            return self.pop(len(self) - 1)
+        elif index == 0:
+            cur = self._first
+            self._first = self._first.next
+        else:
+            self._assert_index(index)
+            prev = self._nth_node(index - 1)
+            cur = prev.next
+            prev.next = cur.next
+        self._length -= 1
+        return cur.value
+
+    def append_left(self, value: _T_co) -> None:
+        node = Node(value, self._first)
+        self._first = node
+        self._length += 1
+
+    def pop_first(self) -> _T_co:
+        return self.pop(0)
+
+    def pop_last(self) -> _T_co:
+        return self.pop()
+
+    def __len__(self):
+        return self._length
+
+    def _iter_nodes(self) -> _t.Iterator[Node[_T_co]]:
+        current = self._first
+        if current is None:
+            return
+        while current.next is not None:
+            yield current
+            current = current.next
+        yield current
+
+    def _nth_node(self, index: int) -> Node[_T_co]:
+        self._assert_index(index)
+        return _iters.nth(self._iter_nodes(), index)
+
+    def _assert_index(self, index: int) -> None:
+        if not isinstance(index, int):
+            raise TypeError(
+                    f"index must be integer, not {index.__class__.__name__}")
+        if not 0 <= index < self._length:
+            raise IndexError(f"list index ({index}) out of range(0, {len(self)})")
+
+    def __iter__(self) -> _t.Iterator[_T_co]:
+        for node in self._iter_nodes():
+            yield node.value
+
+    def __repr__(self):
+        name = self.__class__.__name__
+        return f'{name}({str(self)})'
+
+    def __str__(self):
+        return f'[{_string.join(self, ", ")}]'
+
+    def __getitem__(self, index: int) -> _t.Union[_T_co, 'LinkedList[_T_co]']:
+
+
+        if isinstance(index, int):
+            return self._nth_node(index).value
+
+        if isinstance(index, slice):
+            start: int = index.start if index.start is not None else 0
+            stop: int= index.stop if index.stop is not None else len(self)
+
+            if index.step not in (1, None) or stop < start:
+                raise IndexError
+
+            new_ll = self.__class__()
+            if start == stop:
+                return new_ll
+
+            new_ll._first = self._nth_node(start)
+            if stop == len(self):
+                new_ll._last = self._last
+            else:
+                new_ll._last = self._nth_node(stop - 1)
+
+            return new_ll
+
+        raise TypeError
+
+    def __delitem__(self, index: int):
+        self._assert_index(index)
+        if len(self) == 0:
+            self.clear()
+        elif index == 0:
+                self._first = self._first.next
+        else:
+            prev = self._nth_node(index - 1)
+            prev.next = prev.next.next
+            if prev.next is None:
+                self._last = prev
+        self._length -= 1
+
+    def __setitem__(self, index: int, value: _T_co) -> None:
+        self._nth_node(index).value = value
 
 class Hist(object):
     """

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # it/helpers.py
+"""
+Things generally in other languages that are missing from python or other misc
+objects / functions.
+"""
 
 import typing as _t
 
@@ -10,7 +14,12 @@ try:
 except ImportError:
     pass
 
+### better assert statement: asrt() ###
+
 class _Assert:
+    """Singleton class. See `__call__`."""
+
+    on: bool
 
     def __init__(self, on=True):
         self.on = bool(on)
@@ -29,18 +38,60 @@ class _Assert:
         >>> b = 3
         >>> asrt(a < 4 < b, a=a, b=b)
         AssertionError:
-            a: 0
-            b: 3
+            a: int = 0
+            b: int = 3
 
         Can turn off all asrt checks by setting `asrt.on` to `False`.
         """
         if self.on and not test_:
-            msgs = [f'{k}: {v!r}' for k, v in kwargs.items()]
-            msg = ('\n\t' if len(msgs) > 1 else '') + ',\n\t'.join(msgs)
+            msgs = [f'{k}: {v.__class__.__name__} = {v!r}'
+                    for k, v in kwargs.items()]
+            msg = ('\n\t' if len(msgs) > 1 else '') + '\n\t'.join(msgs)
             raise AssertionError(msg)
 
 asrt = _Assert()  # instance to interact with _Assert
 
+
+# None aware functions
+
+_T = _t.TypeVar('T')
+def none_or(a: _t.Optional[_T], b: _T) -> _T:
+    """Return a if it is not None otherwise b"""
+    return a if a is not None else b
+
+
+def none_getattr(obj: _t.Optional, *attrs: str):
+    """Return a None-Safe `obj.attrs[0].attrs[1].....attrs[N]`
+
+    If any attribute in chain is None, return None rather than throwing an
+    AttributeError
+    """
+    current = obj
+    for attr in attrs:
+        current = getattr(current, attr, None)
+        if current is None:
+            break
+    return current
+
+
+def none_getitem(obj: _t.Optional, *items: _t.Any):
+    """Return a None-safe `obj[items[0]][items[1]]......[items[N]]`
+
+    If any value in chain is None, return None rather than throwing an
+    IndexError or KeyError.
+    """
+    current = obj
+    for item in items:
+        try:
+            current = current[item]
+        except (IndexError, KeyError):
+            current = None
+        if current is None:
+            break
+    return current
+
+
+# Flag
 
 class Flag(object):
     def __init__(self, name='', showid=False):
@@ -55,6 +106,7 @@ class Flag(object):
             info += ' @ {:#X}'.format(id(self))
         return "<Flag{}>".format(info)
 
+# switch / case
 
 class switch(object):
     """

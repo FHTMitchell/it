@@ -46,10 +46,12 @@ __cd__ = 'path/to/start/python/in'   # will CD to here upon importing it
 __default__ = (a_path, sub_path)     # defaults for it.path
 """
 
+
+
 try:
     from it import userpaths as _user_paths
 except ImportError:
-    paths = {}
+    paths: AttrDict[Path] = AttrDict()
     default_paths = ()
 else:
     paths = {key: Path(value) for key, value in _user_paths.__dict__.items() if
@@ -57,7 +59,7 @@ else:
                 and _os.path.isdir(str(value))
                 and key not in ('__default__', '__cd__')
             }
-    paths = AttrDict(paths)
+    paths: AttrDict[Path] = AttrDict(paths)
 
     default_paths = _user_paths.__dict__.get('__default__', ())
     if isinstance(default_paths, str):
@@ -77,9 +79,8 @@ else:
 
     del _user_paths
 
-
 # For use in interpreter
-def setpath(paths: _t.List[Path] = None, *, verbose: bool = True) -> None:
+def setpath(paths: _t.Reversible[Path] = None, *, verbose: bool = True) -> None:
     """
     Adds all paths in path_tuple to sys.path. If None will add every path in
     `def_paths`.
@@ -182,17 +183,17 @@ com = _Com()
 class ld(object):
     """
     ld - list dir
-    
+
     List the attributes and methods of an object with the following filters
     entered as a character in the mode string:
-    
-    (attributes beginning with a lowercase letter will always be shown)    
+
+    (attributes beginning with a lowercase letter will always be shown)
     a   - all:    show all attrs
     c   - caps:   show attrs beginning with a capital
     s/_ - sunder: show attrs beginning with a single underscore
     d   - dunder: show attrs beginning with a double underscore
     __  - show method beginning with either a single or a double underscore
-    
+
     Additional information can be shown (only one of these can be provided)
     t  - types: also show the type of each attribute
     v  - vals:  also show the value of each attribute
@@ -222,7 +223,7 @@ class ld(object):
 
     def __format__(self, format_spec):
         return self.__class__(self._obj, format_spec)
-        
+
     def __call__(self):
         return self  # so it.ld(obj).all == it.ld(obj).all()
 
@@ -284,7 +285,7 @@ class ld(object):
     def dunder(self):
         return self._pass('d')
 
-        
+
 ############################## pwd, cd, ls #####################################
 
 # path navigation tools, designed to mimic bash using fancy classes
