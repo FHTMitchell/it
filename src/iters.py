@@ -6,11 +6,19 @@ import random as _random
 import typing as _t
 from itertools import *
 
-_FLAG = object()
+from .helpers import Flag as _Flag
+
+_NO_DEFAULT = _Flag('NO_DEFAULT')
+
+_T = _t.TypeVar('T')
+_U = _t.TypeVar('U')
+_V = _t.TypeVar('V')
+_Iin = _t.Iterable
+_Iout = _t.Iterator
 
 # Mine
 
-def isiterable(obj, *, include_str=True, include_bytes=True) -> bool:
+def isiterable(obj: _t.Any, *, include_str=True, include_bytes=True) -> bool:
     """Returns true if obj is iterable"""
     if not include_str and isinstance(obj, str):
         return False
@@ -19,7 +27,7 @@ def isiterable(obj, *, include_str=True, include_bytes=True) -> bool:
     return hasattr(obj, '__iter__')
 
 
-def flatten(a: _t.Iterable) -> _t.Iterator:
+def flatten(a: _Iin) -> _Iout:
     """generator of flattened n-deep iterable (excluding str) a."""
     for elem in a:
         if not isinstance(elem, str):
@@ -31,7 +39,7 @@ def flatten(a: _t.Iterable) -> _t.Iterator:
             yield elem
 
 
-def _flatten_fast(a: _t.Iterable) -> _t.Iterator:
+def _flatten_fast(a: _Iin) -> _Iout:
     """generator of flattened n-deep iterable a (types are not checked).
 
     WARNING: Will have infinite recursion if any element is str object
@@ -43,44 +51,65 @@ def _flatten_fast(a: _t.Iterable) -> _t.Iterator:
             yield elem
 flatten.fast = _flatten_fast
 
+def grouper_with_prev(iterable: _Iin[_T], n: int, include_first: bool = False) \
+        -> _Iout[_t.Tuple[_T, ...]]:
+    """
+    Returns n size chuncks of iterable with the previous n-1 elements
+
+        grouper_with_prev('ABCDE', 3) -> ABC, BCD, CDE
+    If include_first is True, will return
+        grouper_with_prev('ABCDE', 3, True) -> A, AB, ABC, BCD, CDE
+    """
+    d = _collections.deque(maxlen=n)
+
+    for elem in iterable:
+        d.append(elem)
+        if len(d) == n or include_first:
+            yield tuple(d)
+
+
 # itertools recipes (edited)
 
-def nth(iterable, n, default=_FLAG):
-    "Returns the nth item or a default value"
+def nth(iterable: _Iin[_T], n: int, default: _U = _NO_DEFAULT) \
+        -> _t.Union[_T, _U]:
+    """Returns the nth item or a default value
+
+    If no default set, raises an error
+    """
     try:
         return next(islice(iterable, n, None))
     except StopIteration:
-        if default is _FLAG:
+        if default is _NO_DEFAULT:
             raise IndexError('Index out of range')
         return default
 
 
-def flatten1deep(listOfLists):
+def flatten1deep(list_of_lists: _Iin[_Iin[_T]]) -> _Iout[_T]:
     "Flatten one level of nesting"
-    return chain.from_iterable(listOfLists)
+    return chain.from_iterable(list_of_lists)
 flatten.one_deep = flatten1deep
 
 
 # itertools recpes (as given)
 
-def take(n, iterable):
+def take(n: int, iterable: _Iin[_T]) -> _t.List[_T]:
     "Return first n items of the iterable as a list"
     return list(islice(iterable, n))
 
 
-def tabulate(function, start=0):
+def tabulate(function: _t.Callable[[int], _T], start: int = 0) -> _Iout[_T]:
     "Return function(0), function(1), ..."
     return map(function, count(start))
 
 
-def tail(n, iterable):
+def tail(n: int, iterable: _Iin[_T]) -> _Iout[_T]:
     """Return an iterator over the last n items
     # tail(3, 'ABCDEFG') --> E F G
     """
     return iter(_collections.deque(iterable, maxlen=n))
 
 
-def consume(iterator, n):
+def consume(iterator: _Iin, n: int) -> None:
     "Advance the iterator n-steps ahead. If n is none, consume entirely."
     # Use functions that consume iterators at C speed.
     if n is None:
@@ -92,18 +121,18 @@ def consume(iterator, n):
 
 
 
-def all_equal(iterable):
+def all_equal(iterable: _Iin) -> bool:
     "Returns True if all the elements are equal to each other"
     g = groupby(iterable)
     return next(g, True) and not next(g, False)
 
 
-def quantify(iterable, pred=bool):
+def quantify(iterable: _Iin[_T], pred: _t.Callable[[_T], bool] = bool) -> int:
     "Count how many times the predicate is true"
     return sum(map(pred, iterable))
 
 
-def pad(iterable, obj=None):
+def pad(iterable: _Iin[_T], obj: _U = None) -> _Iout[_t.Union[_T, _U]]:
     """Returns the sequence elements and then returns obj indefinitely.
 
     Useful for emulating the behavior of the built-in map() function.
@@ -111,7 +140,7 @@ def pad(iterable, obj=None):
     return chain(iterable, repeat(obj))
 
 
-def ncycles(iterable, n):
+def ncycles(iterable: _Iin[_T], n: int) -> _Iout[_T]:
     "Returns the sequence elements n times"
     return chain.from_iterable(repeat(tuple(iterable), n))
 
@@ -120,7 +149,8 @@ def dotproduct(vec1, vec2):
     return sum(map(_operator.mul, vec1, vec2))
 
 
-def repeatfunc(func, times=None, *args):
+def repeatfunc(func: _t.Callable[..., _T], times: int = None, *args: _t.Any) \
+        -> _Iout[_T]:
     """Repeat calls to func with specified arguments.
 
     Example:  repeatfunc(random.random)
@@ -130,14 +160,15 @@ def repeatfunc(func, times=None, *args):
     return starmap(func, repeat(args, times))
 
 
-def pairwise(iterable):
+def pairwise(iterable: _Iin[_T]) -> _Iout[_t.Tuple[_T, _T]]:
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
 
 
-def grouper(iterable, n, fillvalue=None):
+def grouper(iterable: _Iin[_T], n: int, fillvalue: _T = None) \
+        -> _Iout[_t.Tuple[_T, ...]]:
     """Collect data into fixed-length chunks or blocks
     # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
     """
@@ -145,7 +176,7 @@ def grouper(iterable, n, fillvalue=None):
     return zip_longest(*args, fillvalue=fillvalue)
 
 
-def roundrobin(*iterables):
+def roundrobin(*iterables: _Iin[_T]) -> _Iout[_T]:
     "roundrobin('ABC', 'D', 'EF') --> A D E B F C"
     # Recipe credited to George Sakkis
     pending = len(iterables)
@@ -159,7 +190,8 @@ def roundrobin(*iterables):
             nexts = cycle(islice(nexts, pending))
 
 
-def partition(pred, iterable):
+def partition(pred: _t.Callable[[_T], bool], iterable: _Iin[_T])\
+        -> _t.Tuple[_Iout[_T], _Iout[_T]]:
     """Use a predicate to partition entries into false entries and true entries
     # partition(is_odd, range(10)) --> 0 2 4 6 8   and  1 3 5 7 9
     """
@@ -167,13 +199,14 @@ def partition(pred, iterable):
     return filterfalse(pred, t1), filter(pred, t2)
 
 
-def powerset(iterable):
+def powerset(iterable: _Iin[_T]) -> _Iout[_Iout[_T]]:
     "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
 
 
-def unique_everseen(iterable, key=None):
+def unique_everseen(iterable: _Iin[_T], key: _t.Callable[[_T], _t.Any] = None)\
+        -> _Iout[_T]:
     """List unique elements, preserving order. Remember all elements ever seen.
     # unique_everseen('AAAABBBCCDAABBB') --> A B C D
     # unique_everseen('ABBCcAD', str.lower) --> A B C D
@@ -192,7 +225,8 @@ def unique_everseen(iterable, key=None):
                 yield element
 
 
-def unique_justseen(iterable, key=None):
+def unique_justseen(iterable: _Iin[_T], key: _t.Callable[[_T], _t.Any] = None)\
+        -> _Iout[_T]:
     """List unique elements, preserving order. Remember only the element just seen.
     # unique_justseen('AAAABBBCCDAABBB') --> A B C D A B
     # unique_justseen('ABBCcAD', str.lower) --> A B C A D
@@ -201,13 +235,14 @@ def unique_justseen(iterable, key=None):
     return map(next, map(_operator.itemgetter(1), groupby(iterable, key)))
 
 
-def iter_except(func, exception, first=None):
+def iter_except(func: _t.Callable[[], _T], exception: Exception,
+                first: _t.Callable[[], _T] = None) -> _Iout[_T]:
     """ Call a function repeatedly until an exception is raised.
 
     Converts a call-until-exception interface to an iterator interface.
     Like builtins.iter(func, sentinel) but uses an exception instead
     of a sentinel to end the loop.
-    
+
     ``first`` - For database APIs needing an initial cast to db.first()
 
     Examples:
@@ -227,7 +262,8 @@ def iter_except(func, exception, first=None):
         pass
 
 
-def first_true(iterable, default=False, pred=None):
+def first_true(iterable: _Iin[_T], default: _T = False,
+               pred: _t.Callable[[_T], bool] = None) -> _T:
     """Returns the first true value in the iterable.
 
     If no true value is found, returns *default*
@@ -241,20 +277,20 @@ def first_true(iterable, default=False, pred=None):
     return next(filter(pred, iterable), default)
 
 
-def random_product(*args, repeat=1):
+def random_product(*args: _T, repeat: int = 1) -> _t.Tuple[_T, ...]:
     "Random selection from itertools.product(*args, **kwds)"
     pools = [tuple(pool) for pool in args]*repeat
     return tuple(_random.choice(pool) for pool in pools)
 
 
-def random_permutation(iterable, r=None):
+def random_permutation(iterable: _Iin[_T], r: int = None) -> _t.Tuple[_T, ...]:
     "Random selection from itertools.permutations(iterable, r)"
     pool = tuple(iterable)
     r = len(pool) if r is None else r
     return tuple(_random.sample(pool, r))
 
 
-def random_combination(iterable, r):
+def random_combination(iterable: _Iin[_T], r: int = None) -> _t.Tuple[_T, ...]:
     "Random selection from itertools.combinations(iterable, r)"
     pool = tuple(iterable)
     n = len(pool)
@@ -262,7 +298,8 @@ def random_combination(iterable, r):
     return tuple(pool[i] for i in indices)
 
 
-def random_combination_with_replacement(iterable, r):
+def random_combination_with_replacement(iterable: _Iin[_T], r: int = None) \
+        -> _t.Tuple[_T, ...]:
     "Random selection from itertools.combinations_with_replacement(iterable, r)"
     pool = tuple(iterable)
     n = len(pool)

@@ -11,38 +11,12 @@ import typing as _t
 import numpy as _np
 
 from .timers import Timer as _Timer
-from .boxes import default_namedtuple as _default_namedtuple
+
 
 # noinspection PyUnresolvedReferences
 from math import pi, e
 
 _T = _t.TypeVar('T')
-
-__all__ = ['apply']
-
-# helper functions with numpy
-
-def apply(func: _t.Callable, array: _np.ndarray, dtype: _np.dtype = None) \
-        -> _np.ndarray:
-    array = _np.asarray(array)
-    if dtype is None:
-        dtype = array.dtype
-    return _np.fromiter(map(func, array), dtype, count=len(array))
-
-
-
-_Array = _t.TypeVar('Array', _np.ndarray, _n.Real)
-Ball = _default_namedtuple('Ball', ('max', 'min'), (1, 0))
-def scale(x: _Array, inrange: Ball, outrange: Ball) -> _Array:
-    """ Returns x scaled from
-        [inrange.min, inrange.max] -> [outrange.min, outrange.max]
-    """
-    in_ = Ball(inrange)
-    out = Ball(outrange)
-    return (x - in_.min) * ((out.max - out.min)/(in_.max - in_.min)) + out.min
-
-
-
 
 
 # functions involving primes
