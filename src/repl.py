@@ -231,7 +231,7 @@ class ld(object):
 
         ms = {self.modes[m] for m in self._mode}
 
-        attrs = dir(self._obj)
+        attrs = sorted(dir(self._obj), key=self.dir_sort)
         if not 'all' in ms:
             if not 'sunder' in ms:
                 attrs = [a for a in attrs if
@@ -286,6 +286,11 @@ class ld(object):
     @property
     def dunder(self) -> 'ld':
         return self._pass('d')
+        
+    @staticmethod
+    def dir_sort(s: str) -> _t.Tuple[bool, bool, str]:
+        "Sorts objects by all no_leading_underscore -> all sunder -> all dunder"
+        return s.startswith('__'), s[0] == '_', s
 
 
 ############################## pwd, cd, ls #####################################
