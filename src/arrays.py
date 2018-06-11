@@ -7,7 +7,7 @@ import numbers as _n
 import typing as _t
 
 from .boxes import default_namedtuple as _default_namedtuple
-
+from .cls import name as _name
 
 
 def apply(func: _t.Callable, array: _np.ndarray, dtype: _np.dtype = None) \
@@ -34,3 +34,32 @@ def first_consec_index(array: _np.ndarray, length: int) -> int:
     idx = _np.flatnonzero(_np.r_[True, array, True])
     lens = _np.diff(idx) - 1
     return idx[(lens >= length).argmax()]
+
+
+class Array(_np.ndarray):
+    def __new__(cls, array):
+        return _np.asarray(array).view(cls)
+
+
+
+class Coord(Array):
+    coords = {'x': 0, 'y': 1, 'z': 2}
+
+    def __init__(self, array):
+        assert isinstance(self.coords, dict) and self.coords, repr(self.coords)
+        if self.shape != (len(self.coords),):
+            msg = "{}.shape should be {}, not {}"
+            raise ValueError(msg.format(_name(self), (len(self.coords),), self.shape))
+        # noinspection PyArgumentList
+        super().__init__()
+
+    def __getattr__(self, attr):
+        if attr in self.coords:
+            return self[self.coords[attr]]
+        raise AttributeError(attr)
+
+    def __setattr__(self, attr, value):
+        if attr in self.coords:
+            self[self.coords[attr]] = value
+        else:
+            super().__setattr__(attr, value)

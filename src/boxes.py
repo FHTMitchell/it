@@ -78,9 +78,9 @@ def _ordered_unique(a):
             res.append(elem)
     return res
 
-
-def iter_index(a: _t.Sequence, key: _t.Union[int, slice],
-               *, return_slice_type: _T = tuple) -> _t.Any:
+def iter_index(a: _t.Sequence[_T], key: _t.Union[int, slice],
+               *, return_slice_type: type = tuple) \
+        -> _t.Union[_T, _t.Sequence[_T]]:
     """Finds the index or slice of `a` if `a` has __len__ method"""
 
     assert hasattr(a, '__len__'), 'Need len method for advanced indexing'
@@ -130,9 +130,10 @@ def iter_index(a: _t.Sequence, key: _t.Union[int, slice],
                         .format(type(key).__name__))
 
 
-def default_namedtuple(typename: str, field_names: _t.Union[str, _t.Iterable[str]],
-                       default_values: tuple = ()) -> _t.Callable\
-        :
+def default_namedtuple(typename: str,
+                       field_names: _t.Union[str, _t.Iterable[str]],
+                       default_values: tuple = ()) \
+        -> _t.Callable[..., _t.Any]:
     """
     Returns a collections.namedtuple except with default_values.
     default_values can be specified with a tuple of length < len(field_names) or
@@ -152,8 +153,7 @@ def bisect(a, elem, low=0, high=None, right=True):
     Equivalent to the bisect.<side>_bisect (right or left) library functions with
     additional check.
     """
-    lst = list(a)
-    lst.sort()
+    lst = sorted(a)
     assert all(i == j for i, j in zip(a, lst)), "array is not sorted"
     args = (lst, elem, low, high)
     return _bisect.bisect_right(*args) if right else _bisect.bisect_left(*args)
@@ -277,6 +277,7 @@ class AttrDict(_collections.OrderedDict, _t.MutableMapping[str, _T_co],
         if key in dir(self):  # set to self since the keys are not added to __dict__
             msg = "{!r} is already a static attribute of {}"
             raise self.KeyAttrError(msg.format(key, type(self).__name__))
+
 
 class Node(_t.Generic[_T_co]):
 
@@ -449,6 +450,7 @@ class LinkedList(_t.MutableSequence[_T_co]):
 
     def __setitem__(self, index: int, value: _T_co) -> None:
         self._nth_node(index).value = value
+
 
 class Hist(object):
     """

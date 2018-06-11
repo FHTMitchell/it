@@ -5,10 +5,9 @@ from operator import mul as _mul
 import collections as _collections
 import itertools as _itertools
 import functools as _functools
+import numpy as _np
 import numbers as _n
 import typing as _t
-
-import numpy as _np
 
 from .timers import Timer as _Timer
 
@@ -17,6 +16,9 @@ from .timers import Timer as _Timer
 from math import pi, e
 
 _T = _t.TypeVar('T')
+_N = _t.TypeVar('N', int, float, complex)
+_Array = _t.Union[_np.ndarray, _t.Iterable[_n.Number], _t.Iterable, _n.Number]
+_A = _t.TypeVar('A', _np.ndarray, _t.Iterable[_n.Number], _t.Iterable, _n.Number)
 
 
 # functions involving primes
@@ -32,10 +34,10 @@ def isprime(n: int) -> bool:
         if n < 2:
             return False
         return True
-    if n%2 == 0 or n%3 == 0:
+    if n % 2 == 0 or n % 3 == 0:
         return False
     for i in range(5, _rootp1(n), 6):
-        if n%i == 0 or n%(i + 2) == 0:
+        if n % i == 0 or n % (i + 2) == 0:
             return False
     return True
 
@@ -57,13 +59,11 @@ def primelist(n: int) -> _t.List[int]:
         return []
     nums = [True]*(n - 2)
     for num in range(2, _rootp1(n)):
-        counter = num
-        while True:
-            product = counter*num
+        for counter in _itertools.count(num):
+            product = counter * num
             if product >= n:
                 break
             nums[product - 2] = False
-            counter += 1
     return [index for index, val in enumerate(nums, 2) if val]
 
 
@@ -75,9 +75,9 @@ def _memeff_primelist(n: int) -> _t.List[int]:
     primes = []  # Add 2 in at the end, don't need to check non-even
     for i in range(3, int(n), 2):
         for p in primes:
-            if i%p == 0:  # non-prime
+            if i % p == 0:  # non-prime
                 break
-            if p*p > i:  # no factors bigger than sqrt(i)
+            if p * p > i:  # no factors bigger than sqrt(i)
                 primes.append(i)
                 break
         else:
@@ -87,10 +87,10 @@ def _memeff_primelist(n: int) -> _t.List[int]:
 primelist.memeff = _memeff_primelist
 
 
-def factorize(n: int) -> _collections.Counter:
-    """Returns the prime factors of `n`. Returns a Counter of factors.
+def factorize(n: int) -> _t.Counter[int]:
+    """Returns the prime factors of `n` as a multiset of `prime: count` pairs.
 
-    Use `list(factorize(n).elements())` to get a list.
+    Use `list(factorize(n).elements())` to get a list of non-unique primes.
     Use factorize.verbose for a verbose run.
     """
     assert isinstance(n, _n.Integral)
@@ -105,7 +105,7 @@ def factorize(n: int) -> _collections.Counter:
             p_factors.append(m)
             break
         for prime in _itertools.takewhile(lambda x: x < _rootp1(m), possible_primes):
-            if m%prime == 0:
+            if m % prime == 0:
                 m //= prime
                 p_factors.append(prime)
                 break
@@ -123,7 +123,7 @@ def num_divisors(n: int) -> int:  # Not very efficient
 
     See http://mathschallenge.net/library/number/number_of_divisors
     """
-    return prod(f[1] + 1 for f in factorize(n))
+    return prod(f + 1 for f in factorize(n).values())
 
 
 
@@ -132,9 +132,9 @@ def num_divisors(n: int) -> int:  # Not very efficient
 
 # functions involving sums and products
 
-def prod(itr: _t.Iterable[_T]) -> _T:
+def prod(itr: _t.Iterable[_N]) -> _N:
     """Return the product of an iterable"""
-    return _reduce(_mul, itr)
+    return _reduce(_mul, itr, 1)
     # _mul replaces lambda x, y: x * y
 
 
@@ -155,11 +155,12 @@ def _recursive_factorial(n: int) -> int:
 factorial.recursive = _recursive_factorial
 
 
-def weighted_sum(iterable, weights = None) -> float:
+def weighted_sum(iterable: _t.Iterable[_t.Union[float, _t.Tuple[float, float]]],
+                 weights: _t.Iterable[float] = None) -> float:
     """
-    For a list of the form [(amount, weight), ...] returns the sum of each 
+    For a list of the form [(amount, weight), ...] returns the sum of each
     amount multiplied by it's weight, which is then divided by the total weight.
-    
+
     If weights is not None, it is used as the list of weights instead, with
     iterable just being the amounts.
     """
@@ -181,30 +182,31 @@ def weighted_sum(iterable, weights = None) -> float:
 def gcd(a: int, b: int, *, verbose=False):
     """The greatest common denominator of a and b."""
     while b:
-        a, b = b, a%b
+        a, b = b, a % b
         if verbose: print(a, b)
     return a
 
 
 # functions involving averages
-def mean(vector) -> float:
+def mean(vector: _t.Sequence[_n.Real]) -> float:
     "Returns the mean of vector"
     return sum(vector)/len(vector)
 
 
-def median(vector):
+def median(vector: _t.Sequence[_N]) -> _t.Union[_N, float]:
     "Returns the median of vector"
     vector = sorted(vector)
     size = len(vector)
-    if size%2 != 0:
-        return vector[size//2]
-    return mean(vector[size//2: (size//2) + 2])
+    if size % 2 != 0:
+        return vector[size // 2]
+    return mean(vector[size // 2: (size // 2) + 2])
 
 
-def mode(vector, singleton=True):
+def mode(vector: _t.Iterable[_N], singleton: bool = True) -> _t.Union[_N, _t.Set[_N]]:
     """
     Finds the mode of vector. If `singleton` is True, .
     """
+    # noinspection PyArgumentList
     vec_count = _collections.Counter(vector).most_common()
 
     for index, (value, count) in enumerate(vec_count):
@@ -233,7 +235,7 @@ def log(n: _n.Real, base: int = 10) -> float:
     """The log of n in a given base"""
     if base is None:
         return ln(n)
-    return ln(n)/ln(base)
+    return ln(n) / ln(base)
 
 
 
@@ -242,7 +244,7 @@ def log(n: _n.Real, base: int = 10) -> float:
 
 # functions involving vectors / linear algebra
 
-def unit(v) -> _np.ndarray:
+def unit(v: _t.Iterable[_n.Number]) -> _np.ndarray:
     "Gives the unit vector (the direction) of v"
     return _np.divide(v, _np.linalg.norm(v))
 
@@ -280,21 +282,21 @@ def rotmat(angle: float, axis: str = None, direction: str = 'ccw',
 
 
 def diagonalise(M, imaglim=1e6, maxcond=1e5, debug=False):
-    """ 
+    """
     TODO: PROBABLY DOESN'T WORK!!
-    
-    Diagonalise M. 
-    
-    if all the imaginary elements of the diagonalised matrix are less than 
+
+    Diagonalise M.
+
+    if all the imaginary elements of the diagonalised matrix are less than
     imaglim, will return just the real components. Set to None / 0 to ignore.
-    
-    Will raise an AssertionError if the condition of the 
+
+    Will raise an AssertionError if the condition of the
     eigenvectors of M is greater than maxcond (cond(V) = 10**n where n is the
     the number of digits of accuracy for a V). Set to None to ignore.
     """
     evals, evecs = _np.linalg.eig(M)
     evecs_inv = _np.linalg.inv(evecs)
-    D = evecs_inv@M@evecs
+    D = evecs_inv @ M @ evecs
     if debug:
         print("M =\n{}\nD =\n{}\nevecs= \n{}\ncond(evecs) = {}"
               .format(M, D, evecs, _np.linalg.cond(evecs)))
@@ -312,7 +314,9 @@ def diagonalise(M, imaglim=1e6, maxcond=1e5, debug=False):
 
 
 # degree trig
-def _use_deg(f: _t.Callable, arc: bool = False) -> _t.Callable:
+
+def _use_deg(f: _t.Callable, arc: bool = False) \
+        -> _t.Callable[..., float]:
     """Convert a trignometric which uses radians to degrees
 
     If an `arc` function, make sure `arc` is set to True
@@ -390,7 +394,7 @@ def triangles(n: int = 2, stop: int = None) -> _t.Iterator[int]:
 
 # Misc functions
 
-def ispalindrome(n) -> bool:
+def ispalindrome(n: _t.Union[int, str]) -> bool:
     return str(n) == str(n)[::-1]
 
 
@@ -419,7 +423,7 @@ def _rootp1(n: float) -> int:
 # Verbose versions - might put in separate namespace
 
 def _verbose_primelist(n: int) -> _t.List[int]:
-    """Return a list of all primes less than n in a more memory efficient 
+    """Return a list of all primes less than n in a more memory efficient
     manner than primelist. Also faster for small values of n]."""
     # VERBOSE SETUP
     timer = _Timer(5)
@@ -434,9 +438,9 @@ def _verbose_primelist(n: int) -> _t.List[int]:
             if timer.check():
                 msg = "Time taken: {}, found {:,} primes up to {:,}."
                 print(msg.format(timer(pad=4), len(primes), i - 1))
-            if i%p == 0:  # non-prime
+            if i % p == 0:  # non-prime
                 break
-            if p*p > i:  # no factors bigger than sqrt(i)
+            if p * p > i:  # no factors bigger than sqrt(i)
                 primes.append(i)
                 break
         else:
@@ -448,7 +452,7 @@ def _verbose_primelist(n: int) -> _t.List[int]:
     return primes
 
 
-def _verbose_factorize(n: int) -> _collections.Counter:
+def _verbose_factorize(n: int) -> _t.Counter[int]:
     """
     Verbose form of factorize
     """
@@ -471,7 +475,7 @@ def _verbose_factorize(n: int) -> _collections.Counter:
             if timer.check():
                 msg = 'Time taken: {}, found {:,} prime factors up to m = {:,}.'
                 print(msg.format(timer(pad=4), len(p_factors), m))
-            if m%prime == 0:
+            if m % prime == 0:
                 m //= prime
                 p_factors.append(prime)
                 break
@@ -482,9 +486,9 @@ def _verbose_factorize(n: int) -> _collections.Counter:
 
     # VERBOSE END
     print("Found {:,} prime factors in {}".format(len(p_factors), timer))
+
     # noinspection PyArgumentList
     return _collections.Counter(p_factors)
-
 
 primelist.verbose = _verbose_primelist
 factorize.verbose = _verbose_factorize

@@ -7,6 +7,7 @@ import time as _time
 import keyword as _keyword
 import typing as _t
 import numbers as _n
+import dataclasses as _dc
 
 from . import iters as _iters
 from .timers import Timer as _Timer
@@ -78,8 +79,8 @@ def splitall(s: str, seps: _t.Iterable[_t.Union[str, None]], strip: bool = False
 
 # overwriting in consoles
 
-def overwrite(text: str = None, end: str = ' ', pause: float = 0,
-              linelen: int = 79) -> None:
+def overwrite(text: str = None, end: str = '', pause: float = 0,
+              padlength: int = 79) -> None:
     """ Overwrite the last line in stdout
 
     Returns None so do not print, will automatically print to stdout. Use pause
@@ -87,22 +88,80 @@ def overwrite(text: str = None, end: str = ' ', pause: float = 0,
     """
     if text is None:
         text = ''
-    text = '{: <{}}'.format(text, linelen)  # right pad text with spaces to linelen
+    if padlength:
+        text = '{: <{}}'.format(text, padlength)  # right pad text with spaces
     _sys.stdout.write('\r{}{}'.format(text, end))
     _sys.stdout.flush()
-    _time.sleep(pause)
+    if pause:
+        _time.sleep(pause)
 
 
 def load_icon(pause: int = 1, timelimit: float = None) -> None:
     """A spinning load icon"""
     timer = _Timer()
-    cycle = _itertools.cycle('\|/-')
+    cycle = _itertools.cycle(r'\|/-')
     try:
         while timelimit is None or timer.time() < timelimit:
             overwrite(next(cycle), end='', pause=pause)
     except KeyboardInterrupt:
         pass
     overwrite('  ')
+
+class ProgressBar:
+
+    prefix: str
+    suffix: str
+    precision: int
+    length: int
+    progress_char: str
+    empty_char: str
+
+    _timer: _Timer
+    _cycle: _t.Iterator[str]
+
+    def __init__(self, update_rate: float = 0, prefix: str = 'Progress',
+                 suffix: str = 'complete', precision: int = 1, length: int = 80,
+                 progress_char: str = r'█', empty_char: str = '_'):
+        self.prefix = prefix
+        self.suffix = suffix
+        self.precision = precision
+        self.length = length
+        self.progress_char = self._assert_char(progress_char)
+        self.empty_char = self._assert_char(empty_char)
+
+        self._cycle = _itertools.cycle(r'\|/-')
+        self._timer = _Timer(update_rate)
+
+    @staticmethod
+    def _assert_char(s: str) -> str:
+        assert isinstance(s, str), repr(s)
+        assert len(s) == 1, repr(s)
+        return s
+
+    def print_init(self) -> None:
+        self.print_progress(0)
+        self._timer.restart()
+
+    def print_progress(self, fraction: float, total: float = 1) -> None:
+
+        if self._timer.checktime != 0 and not self._timer.check():
+            return
+
+        if total != 1:
+            fraction /= total
+        percent = f'{fraction * 100:.{self.precision}f}%'
+
+        filled_length = int(fraction * self.length)  # truncate towards 0
+        left_fill = self.progress_char*filled_length
+        right_fill = self.empty_char * (self.length - filled_length - 1)
+        load_char = next(self._cycle) if filled_length != self.length else ''
+
+        bar = left_fill + load_char + right_fill
+
+        print(f'\r{self.prefix} |{bar}| {percent} {self.suffix}', end='\r', flush=True)
+
+        if fraction == 1:
+            print(flush=True)
 
 
 # formatting numbers

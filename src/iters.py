@@ -68,6 +68,14 @@ def grouper_with_prev(iterable: _Iin[_T], n: int, include_first: bool = False) \
             yield tuple(d)
 
 
+def repeat_each(iterable: _Iin[_T], n: int) -> _Iout[_T]:
+    """ Repeate each element of iterable n times
+
+        repeat_each('ABC', 3) --> AAABBBCCC
+    """
+    yield from flatten1deep(repeat(i, n) for i in iterable)
+
+
 # itertools recipes (edited)
 
 def nth(iterable: _Iin[_T], n: int, default: _U = _NO_DEFAULT) \

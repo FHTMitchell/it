@@ -136,13 +136,13 @@ _FLAG = _Flag('FMT')
 class _Fmt(object):
     """
     Class for quick formatting.
-    USE it.fmt / obj / fmt_spec
-    OR  it.fmt - obj - fmt_spec
+    Usage:
+        it.fmt / obj / fmt_spec
     """
     _name = 'fmt'
     _fmtbase = _FLAG
 
-    def __init__(self, obj=_FLAG, fmt=None):
+    def __init__(self, obj: _t.Any = _FLAG, fmt: str = None):
         self.obj = obj
         self.fmt = fmt if fmt is not None else self._fmtbase
 
@@ -153,18 +153,18 @@ class _Fmt(object):
             return "<{} {!r}>".format(self._name, self.obj)
         return format(self.obj, self.fmt)
 
-    def __call__(self, obj, fmt=None):
+    def __call__(self, obj: _t.Any, fmt: str = None) -> '_Fmt':
         if fmt is None and self.obj is not _FLAG:
             obj, fmt = self.obj, obj
         return self.__class__(obj, fmt)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: _t.Any) -> '_Fmt':
         return self(other)
 
-    def __sub__(self, other):
-        return self(other)
+    def __rtruediv__(self, other: _t.Any) -> '_Fmt':
+        return self / other
 
-    # could do something with // (__floordiv__)?
+    # could do something with / or //?
 
 
 class _Com(_Fmt):
@@ -172,7 +172,7 @@ class _Com(_Fmt):
     _name = 'com'
     _fmtbase = ','
 
-    def __init__(self, obj=_FLAG, fmt=None):
+    def __init__(self, obj: float = _FLAG, fmt: str = None):
         super(_Com, self).__init__(obj, fmt)
 
 # visible instances
@@ -210,7 +210,7 @@ class ld(object):
         '_': 'sunder'
     }
 
-    def __init__(self, obj, mode='c'):
+    def __init__(self, obj: _t.Any, mode: str = 'c'):
         not_in_modes = ''.join(filter(lambda m: m not in self.modes, mode))
         assert not not_in_modes, repr(not_in_modes)
         assert not all(m in mode for m in 'vt'), repr(mode)
@@ -221,13 +221,14 @@ class ld(object):
     def __repr__(self):
         return _pprint.pformat(self.ret())  # also works for str/print
 
-    def __format__(self, format_spec):
+    def __format__(self, format_spec: str):
         return self.__class__(self._obj, format_spec)
 
-    def __call__(self):
+    def __call__(self) -> 'ld':
         return self  # so it.ld(obj).all == it.ld(obj).all()
 
-    def __iter__(self):
+    def __iter__(self) -> _t.Iterator[_t.Union[str, _t.Tuple[str, str]]]:
+
         ms = {self.modes[m] for m in self._mode}
 
         attrs = dir(self._obj)
@@ -252,37 +253,38 @@ class ld(object):
         return iter(attrs if not isdict else attrs.items())
 
     @property
-    def _fmter(self):
+    def _fmter(self) -> _t.Type[_t.Union[list, dict]]:
         return dict if any(m in self._mode for m in 'vt') else list
 
-    def ret(self):
+    def ret(self) -> _t.Union[_t.List[str], _t.Dict[str, str]]:
+        # noinspection PyTypeChecker
         return self._fmter(self)
 
-    def _pass(self, addmode):
+    def _pass(self, addmode: str) -> 'ld':
         return self.__class__(self._obj, self._mode + addmode)
 
     @property
-    def all(self):
+    def all(self) -> 'ld':
         return self._pass('a')
 
     @property
-    def vals(self):
+    def vals(self) -> 'ld':
         return self._pass('v')
 
     @property
-    def types(self):
+    def types(self) -> 'ld':
         return self._pass('t')
 
     @property
-    def caps(self):
+    def caps(self) -> 'ld':
         return self._pass('c')
 
     @property
-    def sunder(self):
+    def sunder(self) -> 'ld':
         return self._pass('s')
 
     @property
-    def dunder(self):
+    def dunder(self) -> 'ld':
         return self._pass('d')
 
 
@@ -293,6 +295,7 @@ class ld(object):
 _PathType = _t.Union[Path, str]
 
 class _PWD(object):
+
     def __repr__(self):  # also makes __str__
         return _os.getcwd()
 
@@ -313,6 +316,7 @@ class _PWD(object):
 
 
 class _CD(_PWD):  # __repr__ taken from pwd
+
     def __call__(self, path: _PathType = '.') -> '_CD':
         try:
             _os.chdir(path)
@@ -364,7 +368,8 @@ class _CD(_PWD):  # __repr__ taken from pwd
     # it = _IT()
 
 
-class _IT(object):
+class _IT:
+
     def __repr__(self):
         return "<Special method. Use it.cd/'it' (rel) or it.cd.it.it (abs)>"
 
@@ -372,7 +377,7 @@ class _IT(object):
         return cd(paths[key])
 
 
-class _LS(object):
+class _LS(_t.Iterable[Path]):
 
     def __init__(self, _path='.'):
         self._path: Path = Path(_path)
@@ -395,13 +400,13 @@ class _LS(object):
 
         return self.__class__(path)
 
-    def __iter__(self):
+    def __iter__(self) -> _t.Iterator[Path]:
         yield from self._path.iterdir()
 
     def __len__(self):
         return len(list(iter(self)))  # need iter to stop inf recursion
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> Path:
         return list(self)[key]
 
     def files(self, path: _PathType = '.') -> _t.List[Path]:

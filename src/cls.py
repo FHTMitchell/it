@@ -1,13 +1,23 @@
 # Class related scripts
 
-def name(inst, this=False) -> str:
-    if this:
-        return inst.__name__
+import abc as _abc
+import typing as _t
+
+def name(inst: _t.Any) -> str:
+    """
+    Return the class name of an instance of that class
+
+    >>> name(1) == 'int'
+    >>> name("hello") == 'str'
+    >>> name(object) == 'type'
+    """
     return inst.__class__.__name__
 
 
-def class_repr(inst, *attrs, codelike=True, sep=', ', colon=False) -> str:
-    """
+def class_repr(inst: _t.Any, *attrs: str, codelike: bool = True,
+               sep: str = ', ', colon: bool = False) -> str:
+    """ Format an instance of a class using attributes `attrs`
+
     For simple class repr formatting. If codelike then gives output of:
         cls_name(attr1=value1, attr2=value2)
     If not then:
@@ -37,9 +47,11 @@ def class_repr(inst, *attrs, codelike=True, sep=', ', colon=False) -> str:
     return repr_str.format(inst.__class__.__name__ + colon_s, attrs_repr)
 
 
-def class_equal(inst, other, *attrs, raise_miss_attr=True, force_same_cls=False) \
+def class_equal(inst: _t.Any, other: _t.Any, *attrs: str,
+                raise_miss_attr: bool = True, force_same_cls: bool = True) \
         -> bool:
-    """
+    """ Check that two instances are equal dependent on attrs
+
     Checks if all the attrs given are equal for both inst and other.
     If `raise_miss_attr` an exception is raised if `other` does not have any of
     the attrs else the function just returns False.
@@ -49,7 +61,7 @@ def class_equal(inst, other, *attrs, raise_miss_attr=True, force_same_cls=False)
     if force_same_cls:
         if not (isinstance(inst, other.__class__) or isinstance(other, inst.__class__)):
             raise TypeError("Types {!r} and {!r} cannot be compared"
-                            .format(inst.__class__.__name__, other.__class__.__name__))
+                            .format(name(inst), name(other)))
 
     if len(attrs) == 1 and not isinstance(attrs[0], str):
         attrs = attrs[0]
@@ -63,32 +75,15 @@ def class_equal(inst, other, *attrs, raise_miss_attr=True, force_same_cls=False)
     return all(getattr(inst, attr) == getattr(other, attr) for attr in attrs)
 
 
-try:
-    import numpy as _np
-except ImportError:
-    pass
-else:
-    class Array(_np.ndarray):
-        def __new__(cls, array):
-            return _np.asarray(array).view(cls)
+class GetAttrBase(_abc.ABC):
+    """
+    Base class which can be used to produce a good error message when attribute
+    does not exist
+    """
 
+    def _raise_no_attribute(self, attr: str) -> None:
+        msg = "'{}' object has not attribute '{}'"
+        raise AttributeError(msg.format(name(self), attr))
 
-    class Coord(Array):
-        coords = {'x': 0, 'y': 1, 'z': 2}
-
-        def __init__(self, array):
-            assert isinstance(self.coords, dict) and self.coords, repr(self.coords)
-            if self.shape != (len(self.coords),):
-                msg = "{}.shape should be {}, not {}"
-                raise ValueError(msg.format(name(self), (len(self.coords),), self.shape))
-
-        def __getattr__(self, attr):
-            if attr in self.coords:
-                return self[self.coords[attr]]
-            return super().__getattr__(attr)
-
-        def __setattr__(self, attr, value):
-            if attr in self.coords:
-                self[self.coords[attr]] = value
-            else:
-                super().__setattr__(attr, value)
+    def __getattr__(self, attr: str) -> None:
+        self._raise_no_attribute(attr)
