@@ -126,6 +126,15 @@ def num_divisors(n: int) -> int:  # Not very efficient
     return prod(f + 1 for f in factorize(n).values())
 
 
+def all_factors(n: int) -> _t.List[int]:
+    """ Return all factors (not just prime factors) of an integer `n`
+    """
+    prime_factors = list(factorize(n).elements())
+    factors = {prod(s)
+               for i in range(1, len(prime_factors))  # add n in manually
+               for s in _itertools.combinations(prime_factors, i)}
+    return sorted(factors | {1, n})
+
 
 
 
