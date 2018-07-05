@@ -52,6 +52,7 @@ def _flatten_fast(a: _Iin) -> _Iout:
             yield elem
 flatten.fast = _flatten_fast
 
+
 def grouper_with_prev(iterable: _Iin[_T], n: int, include_first: bool = False) \
         -> _Iout[_t.Tuple[_T, ...]]:
     """
@@ -74,7 +75,17 @@ def repeat_each(iterable: _Iin[_T], n: int) -> _Iout[_T]:
 
         repeat_each('ABC', 3) --> AAABBBCCC
     """
-    yield from flatten1deep(repeat(i, n) for i in iterable)
+    return flatten1deep(repeat(i, n) for i in iterable)
+
+
+def argmap(func: _t.Callable[..., _V], iterable: _Iin[_U], *args: _t.Any) \
+        -> _Iout[_t.Tuple[_U, _V]]:
+    """Yield each element of iterable and func applied to that element as a tuple
+
+        argmap(bool, range(3)) -> (0, False), (1, True), (2, True)
+    """
+    itr1, itr2 = tee(iterable, 2)
+    return zip(itr1, map(func, itr2, *args))
 
 
 def arbitrary_partition(key: _t.Callable[[_T], _H], iterable: _Iin[_T]) \
