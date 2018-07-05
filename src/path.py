@@ -2,66 +2,51 @@
 # it/path.py
 
 import typing as _t
-import operator as _op
-import itertools as _it
-
 from pathlib import Path
+from . import iters as _it
+
+class Directory(_t.NamedTuple):
+    path: Path
+    dirs: _t.List[Path]
+    files: _t.List[Path]
+
 
 def iterdirs(path: Path) -> _t.Iterator[Path]:
-    """ Iterate through all the directories in a
-
-    :param path:
-    :return:
-    """
+    """ Iterate through all the directories in path """
     return filter(Path.is_dir, path.iterdir())
 
 
 def iterfiles(path: Path) -> _t.Iterator[Path]:
-    """
-
-    :param path:
-    :return:
-    """
+    """ Iterate through all files in path """
     return filter(Path.is_file, path.iterdir())
 
 
 def iternotdirs(path: Path) -> _t.Iterator[Path]:
-    """
-
-    :param path:
-    :return:
-    """
+    """ Iterate over all objects in path that are not directories """
     return _it.filterfalse(Path.is_dir, path.iterdir())
 
 
-def walk(path: _t.Union[Path, str], verbose: bool = False) \
-        -> _t.Iterator[_t.Tuple[ Path, _t.Iterator[Path],  _t.Iterator[Path]]]:
-    """
+def walk(path: _t.Union[Path, str], verbose: bool = False)  \
+        -> _t.Iterator[Directory]:
+    """ Copy of os.path.walk but for Path objects """
 
-    :param path:
-    :return:
-    """
-    if not isinstance(path, Path):
+    if not isinstance(path, Path):  # don't optimise -- takes nanoseconds
         path = Path(path)
 
     try:
-        # better to put them into RAM rather than iterating 3 times
-        # and allowing errors to bubble up
-        issubdirs = {k: list(g) for k, g
-                     in _it.groupby(path.iterdir(), key=Path.is_dir)}
-        yield path, issubdirs.get(True, []), issubdirs.get(False, [])
+        # Better to put them into RAM rather than iterating 3 times
+        # and allowing errors to bubble up.
+        files, dirs = map(list, _it.partition(Path.is_dir, path.iterdir()))
+        yield Directory(path, dirs, files)
     except PermissionError as e:
         if verbose:
             print(e, '(Skipping)')
         return
 
-    for subwalk in map(walk, issubdirs.get(True, []), _it.repeat(verbose)):
+    for subwalk in map(walk, dirs, _it.repeat(verbose)):
         yield from subwalk
 
-
-
-
-
+x = next(walk('.')).dirs[0].exists()
 
 #
 # class Path(str):

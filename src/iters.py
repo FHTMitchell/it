@@ -13,6 +13,7 @@ _NO_DEFAULT = _Flag('NO_DEFAULT')
 _T = _t.TypeVar('T')
 _U = _t.TypeVar('U')
 _V = _t.TypeVar('V')
+_H = _t.TypeVar('H', bound=_t.Hashable)
 _Iin = _t.Iterable
 _Iout = _t.Iterator
 
@@ -75,6 +76,21 @@ def repeat_each(iterable: _Iin[_T], n: int) -> _Iout[_T]:
     """
     yield from flatten1deep(repeat(i, n) for i in iterable)
 
+
+def arbitrary_partition(key: _t.Callable[[_T], _H], iterable: _Iin[_T]) \
+        -> _t.Dict[_H, _T]:
+    """Partition an iterable by an arbitrary key
+
+    Returns a dict (rather than a tuple)
+
+        arbitrary_partition(lambda x: x % 3, '123456')
+            -> {0: [3, 6], 1: [1, 4], 2: [2, 5]}
+    """
+    d = _collections.defaultdict(list)
+    for item in iterable:
+        d[key(item)].append(item)
+    # noinspection PyTypeChecker
+    return d
 
 # itertools recipes (edited)
 

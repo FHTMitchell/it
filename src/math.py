@@ -1,4 +1,4 @@
-"Mathematical related scripts"
+"""Mathematical related scripts"""
 
 from functools import reduce as _reduce
 from operator import mul as _mul
@@ -43,7 +43,7 @@ def isprime(n: int) -> bool:
 
 
 def _safe_isprime(n: int) -> bool:
-    "Safe version of isprime which checks if n is an integer"
+    """Safe version of isprime which checks if n is an integer"""
     if not isinstance(n, _n.Integral):
         raise ValueError('n is not an integral type: {!r}'.format(type(n).__name__))
     return isprime(n)
@@ -93,23 +93,28 @@ def factorize(n: int) -> _t.Counter[int]:
     Use `list(factorize(n).elements())` to get a list of non-unique primes.
     Use factorize.verbose for a verbose run.
     """
-    assert isinstance(n, _n.Integral)
+    assert isinstance(n, _n.Integral) and n >= 1
 
     possible_primes = primelist(_rootp1(n))  # <=sqrt(n) highest prime possible other than n
     m = n
     p_factors = []
 
     while m != 1:
+
         if m in possible_primes:
             # quick check to see if m is prime
             p_factors.append(m)
             break
-        for prime in _itertools.takewhile(lambda x: x < _rootp1(m), possible_primes):
+
+        # use `takewhile` so we can break out of outer loop easily in case `n`
+        # is prime --- otherwise would have to set `m = 1` or something hacky.
+        root_m_p1 = _rootp1(n)  # we don't have to recalculate each time
+        for prime in _itertools.takewhile(lambda x: x < root_m_p1, possible_primes):
             if m % prime == 0:
                 m //= prime
                 p_factors.append(prime)
                 break
-        else:
+        else:  # no break
             # will only occur if n is prime
             p_factors.append(m)
             break
@@ -118,7 +123,7 @@ def factorize(n: int) -> _t.Counter[int]:
     return _collections.Counter(p_factors)
 
 
-def num_divisors(n: int) -> int:  # Not very efficient
+def num_factors(n: int) -> int:  # Not very efficient
     """Gives the number of divisors n has.
 
     See http://mathschallenge.net/library/number/number_of_divisors
@@ -127,8 +132,7 @@ def num_divisors(n: int) -> int:  # Not very efficient
 
 
 def all_factors(n: int) -> _t.List[int]:
-    """ Return all factors (not just prime factors) of an integer `n`
-    """
+    """ Return all factors (not just prime factors) of an integer `n`"""
     prime_factors = list(factorize(n).elements())
     factors = {prod(s)
                for i in range(1, len(prime_factors))  # add n in manually
@@ -149,11 +153,10 @@ def prod(itr: _t.Iterable[_N]) -> _N:
 
 def factorial(n: int) -> int:
     """factorial: Uses a generator"""
+    assert isinstance(n, _n.Integral)
     if n > 1:
         return prod(range(1, n + 1))
-    assert isinstance(n, _n.Integral)
     return 1
-
 
 def _recursive_factorial(n: int) -> int:
     """factorial: Uses recursion (innefficient)"""
@@ -198,12 +201,12 @@ def gcd(a: int, b: int, *, verbose=False):
 
 # functions involving averages
 def mean(vector: _t.Sequence[_n.Real]) -> float:
-    "Returns the mean of vector"
+    """Returns the mean of vector"""
     return sum(vector)/len(vector)
 
 
 def median(vector: _t.Sequence[_N]) -> _t.Union[_N, float]:
-    "Returns the median of vector"
+    """Returns the median of vector"""
     vector = sorted(vector)
     size = len(vector)
     if size % 2 != 0:
@@ -254,7 +257,7 @@ def log(n: _n.Real, base: int = 10) -> float:
 # functions involving vectors / linear algebra
 
 def unit(v: _t.Iterable[_n.Number]) -> _np.ndarray:
-    "Gives the unit vector (the direction) of v"
+    """Gives the unit vector (the direction) of v"""
     return _np.divide(v, _np.linalg.norm(v))
 
 
@@ -332,24 +335,11 @@ def _use_deg(f: _t.Callable, arc: bool = False) \
     """
 
     if not arc:
-        def df(*args, **kwargs):
-            # Need to convert all numeric input types to degrees
-            args = list(args)
-            for index, value in enumerate(args):
-                try:
-                    args[index] = _np.deg2rad(value)
-                except TypeError:
-                    pass
-            for key, value in kwargs.items():
-                if key == 'out':
-                    continue  # ignore
-                try:
-                    kwargs[key] = _np.deg2rad(value)
-                except TypeError:
-                    pass
-            # and return
-            return f(*args, **kwargs)
-
+        # numpy sin/cos/tan takes a single position-nly argument,
+        # the array / number to apply the ufunc to
+        def df(x, *args, **kwargs):
+            x = _np.deg2rad(x)
+            return f(x, *args, **kwargs)
     else:
         def df(*args, **kwargs):
             return _np.rad2deg(f(*args, **kwargs))
@@ -373,7 +363,7 @@ arctan2d = _use_deg(_np.arctan2, True)
 # Generators
 
 def fib(a: int = 1, b: int = 1) -> _t.Iterator[int]:
-    "Generator for the Fibonacci sequence."
+    """Generator for the Fibonacci sequence."""
     a, b = sorted((a, b))
     yield a
     yield b
@@ -383,7 +373,7 @@ def fib(a: int = 1, b: int = 1) -> _t.Iterator[int]:
 
 
 def triangles(n: int = 2, stop: int = None) -> _t.Iterator[int]:
-    "Generates the (first `stop`) nth dimensional triangle numbers."
+    """Generates the (first `stop`) nth dimensional triangle numbers."""
     if n == 1:
         if stop is None:
             yield from _itertools.count()
@@ -420,7 +410,7 @@ def precision(x: _n.Real) -> int:
 
 
 def _rootp1(n: float) -> int:
-    'returns the truncated square root of n plus 1 for use in range'
+    """returns the truncated square root of n plus 1 for use in range"""
     return int(n**0.5) + 1
 
 

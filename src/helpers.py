@@ -14,6 +14,8 @@ try:
 except ImportError:
     pass
 
+_T = _t.TypeVar('T')
+
 ### better assert statement: asrt() ###
 
 class _Assert:
@@ -51,6 +53,39 @@ class _Assert:
 
 asrt = _Assert()  # instance to interact with _Assert
 
+# sanitised input
+
+def sanitised_input(prompt: str, type_: _t.Type[_T] = str, min_: float = None,
+                    max_: float = None, range_: range = None) -> _T:
+    """
+    """
+
+    if min_ is not None and max_ is not None and max_ < min_:
+        raise ValueError("min_ must be less than or equal to max_.")
+
+    while True:
+
+        ui = input(prompt)
+
+        if type_ is not str:
+            try:
+                # noinspection PyCallingNonCallable
+                ui = type_(ui)
+            except ValueError:
+                print("Input type must be {0}.".format(type_.__name__))
+                continue
+
+        if max_ is not None and ui > max_:
+            print("Input must be less than or equal to {0}.".format(max_))
+        elif min_ is not None and ui < min_:
+            print("Input must be greater than or equal to {0}.".format(min_))
+        elif range_ is not None and ui not in range_:
+            if isinstance(range_, range):
+                print(f"Input must be between {range_.start} and {range_.stop}.")
+            else:
+                print(f"Input must be in {set(range_)}.")
+        else:
+            return ui
 
 # None aware functions
 

@@ -11,7 +11,10 @@ def name(inst: _t.Any) -> str:
     >>> name("hello") == 'str'
     >>> name(object) == 'type'
     """
-    return inst.__class__.__name__
+    try:
+        return inst.__class__.__qualname__
+    except AttributeError:
+        return inst.__class__.__name__
 
 
 def class_repr(inst: _t.Any, *attrs: str, codelike: bool = True,
@@ -44,7 +47,7 @@ def class_repr(inst: _t.Any, *attrs: str, codelike: bool = True,
                           for attr in attrs)
     repr_str = '{}({})' if codelike else '<{} {}>'
     colon_s = ':' if (colon and not codelike) else ''
-    return repr_str.format(inst.__class__.__name__ + colon_s, attrs_repr)
+    return repr_str.format(name(inst) + colon_s, attrs_repr)
 
 
 def class_equal(inst: _t.Any, other: _t.Any, *attrs: str,
@@ -60,19 +63,18 @@ def class_equal(inst: _t.Any, other: _t.Any, *attrs: str,
     """
     if force_same_cls:
         if not (isinstance(inst, other.__class__) or isinstance(other, inst.__class__)):
-            raise TypeError("Types {!r} and {!r} cannot be compared"
-                            .format(name(inst), name(other)))
+            return NotImplemented
 
+    # in case we are passed an iterable of strings
     if len(attrs) == 1 and not isinstance(attrs[0], str):
         attrs = attrs[0]
 
-    for attr in attrs:
-        if not hasattr(other, attr):
-            if not raise_miss_attr:
-                return False
-            raise ValueError("{} does not have attribute {!r}".format(other, attr))
-
-    return all(getattr(inst, attr) == getattr(other, attr) for attr in attrs)
+    try:
+        return all(getattr(inst, attr) == getattr(other, attr) for attr in attrs)
+    except AttributeError:
+        if not raise_miss_attr:
+            return False
+        raise
 
 
 class GetAttrBase(_abc.ABC):

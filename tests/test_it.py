@@ -4,7 +4,6 @@
 tests for the it module
 """
 
-import pytest
 import it
 
-pass
+print(it.math.all_factors(180))
