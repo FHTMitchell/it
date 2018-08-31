@@ -53,14 +53,15 @@ def _flatten_fast(a: _Iin) -> _Iout:
 flatten.fast = _flatten_fast
 
 
-def grouper_with_prev(iterable: _Iin[_T], n: int, include_first: bool = False) \
+def nwise(iterable: _Iin[_T], n: int, include_first: bool = False) \
         -> _Iout[_t.Tuple[_T, ...]]:
     """
-    Returns n size chuncks of iterable with the previous n-1 elements
+    Returns n size chunks of iterable with the previous n-1 elements
 
-        grouper_with_prev('ABCDE', 3) -> ABC, BCD, CDE
+    Like pairwise but for generic chunk size n
+        nwise('ABCDE', 3) -> ABC, BCD, CDE
     If include_first is True, will return
-        grouper_with_prev('ABCDE', 3, True) -> A, AB, ABC, BCD, CDE
+        nwise('ABCDE', 3, True) -> A, AB, ABC, BCD, CDE
     """
     d = _collections.deque(maxlen=n)
 
@@ -68,6 +69,20 @@ def grouper_with_prev(iterable: _Iin[_T], n: int, include_first: bool = False) \
         d.append(elem)
         if len(d) == n or include_first:
             yield tuple(d)
+
+
+def multi_round_robin(*iterables: _Iin[_T], n: int, fillvalue: _T = None) \
+        -> _Iout[_T]:
+    """ Collect data from multiple iterables in groups
+
+        multi_round_robin('ABCD', 'EFGH', n=2) --> A B E F C D G H
+    """
+    # faster to use chain.from_iterable than for loops
+    return chain.from_iterable(
+            chain.from_iterable(
+                    zip(*(grouper(itr, n, fillvalue) for itr in iterables))
+            )
+    )
 
 
 def repeat_each(iterable: _Iin[_T], n: int) -> _Iout[_T]:
@@ -205,7 +220,8 @@ def pairwise(iterable: _Iin[_T]) -> _Iout[_t.Tuple[_T, _T]]:
 def grouper(iterable: _Iin[_T], n: int, fillvalue: _T = None) \
         -> _Iout[_t.Tuple[_T, ...]]:
     """Collect data into fixed-length chunks or blocks
-    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
+
+        grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
     """
     args = [iter(iterable)]*n
     return zip_longest(*args, fillvalue=fillvalue)

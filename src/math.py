@@ -211,7 +211,7 @@ def median(vector: _t.Sequence[_N]) -> _t.Union[_N, float]:
     size = len(vector)
     if size % 2 != 0:
         return vector[size // 2]
-    return mean(vector[size // 2: (size // 2) + 2])
+    return mean(vector[size // 2 : (size // 2) + 2])
 
 
 def mode(vector: _t.Iterable[_N], singleton: bool = True) -> _t.Union[_N, _t.Set[_N]]:
@@ -231,7 +231,7 @@ def mode(vector: _t.Iterable[_N], singleton: bool = True) -> _t.Union[_N, _t.Set
     if singleton:
         if len(ans) == 1:
             return ans[0][0]
-        raise ValueError("More than one mode found (set singlton to False)")
+        raise ValueError("More than one mode found (set singleton to False)")
     return {v[0] for v in ans}
 
 

@@ -62,7 +62,8 @@ def class_equal(inst: _t.Any, other: _t.Any, *attrs: str,
     subclass of the other, then an exception is raised.
     """
     if force_same_cls:
-        if not (isinstance(inst, other.__class__) or isinstance(other, inst.__class__)):
+        if not (isinstance(inst, other.__class__)
+                or isinstance(other, inst.__class__)):
             return NotImplemented
 
     # in case we are passed an iterable of strings

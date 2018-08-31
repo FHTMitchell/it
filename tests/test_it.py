@@ -6,4 +6,3 @@ tests for the it module
 
 import it
 
-print(it.math.all_factors(180))

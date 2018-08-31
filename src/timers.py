@@ -129,13 +129,14 @@ class Stopwatch(Clock):
         """
         clsname = self.__class__.__name__
 
-        if any((c in fmt) for c in '<=^'):
-            msg = "{} only supports right alligned pad".format(clsname)
+        if any((c in fmt) for c in '=<^'):
+            msg = "{} only supports right aligned pad".format(clsname)
             raise ValueError(msg)
 
         if '>' in fmt:
 
             index = fmt.index('>')
+
             if index == 0:
                 pass
             elif index == 1:
@@ -153,6 +154,7 @@ class Stopwatch(Clock):
                 pad += char
             fmt = fmt[index + len(pad) + 1:]
             pad = int(pad) if pad else 0
+
         else:
             pad = 0
 
