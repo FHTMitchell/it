@@ -14,10 +14,17 @@ from .timers import Timer as _Timer
 from .cls import name as _cls_name
 
 
+# gobble
+
+def gobble(s: str, indent: int = 0) -> str:
+    """"""
+    fmt = ' '*indent + '{}'
+    return '\n'.join(fmt.format(line.lstrip()) for line in s.splitlines())
+
 # pluralizing
 
 def pluralize(n: int, singular: str, plural: str, prefix: str = "") -> str:
-    """Returns singular if n == 1 else plural"""
+    """singular if n == 1 else plural"""
     return prefix + (singular if n == 1 else plural)
 
 
@@ -106,6 +113,7 @@ def load_icon(pause: int = 1, timelimit: float = None) -> None:
     except KeyboardInterrupt:
         pass
     overwrite('  ')
+
 
 class ProgressBar:
 

@@ -31,9 +31,7 @@ def isprime(n: int) -> bool:
     """
     # No assertion or conversion: had significant impact!
     if n < 4:
-        if n < 2:
-            return False
-        return True
+        return n >= 2
     if n % 2 == 0 or n % 3 == 0:
         return False
     for i in range(5, _rootp1(n), 6):

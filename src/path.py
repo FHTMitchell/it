@@ -46,7 +46,7 @@ def walk(path: _t.Union[Path, str], verbose: bool = False)  \
     for subwalk in map(walk, dirs, _it.repeat(verbose)):
         yield from subwalk
 
-x = next(walk('.')).dirs[0].exists()
+
 
 #
 # class Path(str):

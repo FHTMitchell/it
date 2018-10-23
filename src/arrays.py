@@ -3,6 +3,7 @@ Helper function for numpy arrays
 """
 
 import numpy as _np
+import matplotlib.pyplot as _plt
 import numbers as _n
 import typing as _t
 
@@ -35,12 +36,31 @@ def first_consec_index(array: _np.ndarray, length: int) -> int:
     lens = _np.diff(idx) - 1
     return idx[(lens >= length).argmax()]
 
+class FigureAxes(_t.NamedTuple):
+    fig: _plt.Figure
+    ax: _plt.Axes
+
+def plot_colormap(x: _np.ndarray, y: _np.ndarray,
+                  apply: _t.Callable[[_np.ndarray, _np.ndarray], _np.ndarray],
+                  auto_aspect: bool = True, **kwargs) -> FigureAxes:
+
+    figax = FigureAxes(*_plt.subplots())
+
+    xs, ys = _np.meshgrid(x, y)
+    z = apply(xs, ys)
+
+    aspect = 'auto' if auto_aspect else 'equal'
+    img = figax.ax.imshow(z, interpolation='none', origin='lower',
+                          extent=[x[0], x[-1], y[0], y[-1]], aspect=aspect,
+                          **kwargs)
+    figax.fig.colorbar(img)
+
+    return figax
+
 
 class Array(_np.ndarray):
     def __new__(cls, array):
         return _np.asarray(array).view(cls)
-
-
 
 class Coord(Array):
     coords = {'x': 0, 'y': 1, 'z': 2}
