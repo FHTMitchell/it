@@ -25,10 +25,10 @@ if ver <= (3, 6):
     _warn("Python version 3.6.0 or greater is expected, not %d.%d.%d" % ver[:3])
 
 try:
-    from .src.repl import *
-    from .src import (helpers, timers, cls, iters as ers, string, test, math, \
+    from .it.repl import *
+    from .it import (helpers, timers, cls, iters as ers, string, test, math, \
                       boxes, path, rand, arrays)
-    from .src.rand import *
+    from .it.rand import *
 except ImportError as e:
     _warn("Unable to load module: {!s}".format(e))
     raise
